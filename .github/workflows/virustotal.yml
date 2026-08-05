@@ -1,0 +1,104 @@
+name: VirusTotal
+
+# Scans the published release binaries with VirusTotal and appends the
+# SHA-256-addressed permalinks to the release notes.
+#
+#  - Runs automatically whenever a release is published.
+#  - Can also be run manually against any existing tag (Actions -> VirusTotal
+#    -> Run workflow), which is how you test it against the current v1.1.0
+#    without cutting a new release.
+#
+# Requires a repository secret VT_API_KEY (a free VirusTotal API key).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to scan (e.g. v1.1.0)
+        required: true
+        default: v1.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release download "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" --dir dist
+
+      # Extract the actual executable from each archive: that native binary
+      # (sweeft.exe / sweeft) is what antivirus engines flag, and its hash is
+      # what Scoop/Homebrew install — so it's the meaningful thing to scan.
+      - name: Extract binaries
+        run: |
+          set -euo pipefail
+          mkdir -p bins
+          for f in dist/*; do
+            base=$(basename "$f")
+            case "$f" in
+              *.zip)    unzip -o -j "$f" sweeft.exe -d bins && mv bins/sweeft.exe "bins/${base%.zip}.exe" ;;
+              *.tar.gz) tar -xzf "$f" -C bins sweeft         && mv bins/sweeft     "bins/${base%.tar.gz}"  ;;
+            esac
+          done
+          ls -lh bins
+
+      - name: Scan with VirusTotal
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## VirusTotal"
+            echo ""
+            echo "Automated scan of the extracted release binaries (SHA-256 permalinks):"
+            echo ""
+          } > vt.md
+          for f in bins/*; do
+            name=$(basename "$f")
+            sha=$(sha256sum "$f" | awk '{print $1}')
+            echo "Uploading $name ..."
+            id=$(curl -s -X POST https://www.virustotal.com/api/v3/files \
+                   -H "x-apikey: $VT_API_KEY" -F file=@"$f" | jq -r '.data.id')
+            stats=""
+            for _ in $(seq 1 40); do
+              a=$(curl -s -H "x-apikey: $VT_API_KEY" "https://www.virustotal.com/api/v3/analyses/$id")
+              st=$(echo "$a" | jq -r '.data.attributes.status')
+              if [ "$st" = "completed" ]; then
+                stats=$(echo "$a" | jq -r '.data.attributes.stats
+                          | "\(.malicious)/\(.malicious + .suspicious + .undetected + .harmless)"')
+                break
+              fi
+              sleep 15
+            done
+            echo "- \`$name\` — [${stats:-pending} detections](https://www.virustotal.com/gui/file/$sha)" >> vt.md
+            sleep 20   # stay under the free key's 4 requests/min limit
+          done
+          cat vt.md
+
+      - name: Append links to release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release view "$TAG" --repo "${{ github.repository }}" --json body -q .body > body.md || : > body.md
+          # Drop any previous VirusTotal section so re-runs don't stack copies.
+          awk '/^## VirusTotal$/{exit} {print}' body.md > body.trim
+          printf '\n' >> body.trim
+          cat vt.md >> body.trim
+          gh release edit "$TAG" --repo "${{ github.repository }}" --notes-file body.trim
