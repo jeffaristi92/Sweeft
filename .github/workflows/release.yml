@@ -3,22 +3,23 @@ name: Release
 on:
   push:
     tags: [ 'v*' ]
+  workflow_dispatch: {}   # allow manual test runs (builds only, no publish)
 
 jobs:
   build:
-    name: Build ${{ matrix.rid }}
+    name: Build ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            rid: win-x64
+            rids: win-x64
           - os: ubuntu-latest
-            rid: linux-x64
+            rids: linux-x64
+          # Apple Silicon runner cross-compiles BOTH macOS architectures,
+          # so we don't depend on the scarce macOS Intel (macos-13) runners.
           - os: macos-latest
-            rid: osx-arm64
-          - os: macos-13
-            rid: osx-x64
+            rids: osx-arm64 osx-x64
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -35,35 +36,36 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
 
-      - name: Publish (NativeAOT)
+      - name: Publish + package (NativeAOT)
         run: |
-          VER="${GITHUB_REF_NAME#v}"
-          dotnet publish src/Sweeft.Console/Sweeft.Console.csproj \
-            -c Release -r ${{ matrix.rid }} -p:Version="$VER" -o publish
-
-      - name: Package
-        run: |
-          VER="${GITHUB_REF_NAME#v}"
-          NAME="sweeft-${VER}-${{ matrix.rid }}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then VER="${GITHUB_REF_NAME#v}"; else VER="0.0.0-dev"; fi
           mkdir -p dist
-          cd publish
-          if [ -f sweeft.exe ]; then
-            7z a "../dist/${NAME}.zip" sweeft.exe
-          else
-            chmod +x sweeft
-            tar -czf "../dist/${NAME}.tar.gz" sweeft
-          fi
+          for rid in ${{ matrix.rids }}; do
+            echo "::group::publish $rid"
+            dotnet publish src/Sweeft.Console/Sweeft.Console.csproj \
+              -c Release -r "$rid" -p:Version="$VER" -o "publish/$rid"
+            NAME="sweeft-${VER}-${rid}"
+            if [ "$rid" = "win-x64" ]; then
+              ( cd "publish/$rid" && 7z a "../../dist/${NAME}.zip" sweeft.exe )
+            else
+              chmod +x "publish/$rid/sweeft"
+              tar -C "publish/$rid" -czf "dist/${NAME}.tar.gz" sweeft
+            fi
+            echo "::endgroup::"
+          done
+          ls -lh dist
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pkg-${{ matrix.rid }}
+          name: pkg-${{ matrix.os }}
           path: dist/*
           if-no-files-found: error
 
   release:
     name: Publish GitHub Release
     needs: build
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: write
