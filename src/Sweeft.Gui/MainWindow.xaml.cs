@@ -15,6 +15,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _viewModel;
         Closing += (_, _) => _viewModel.SaveConfigSilently();
+
+        // Bridge the custom-drawn treemap to the view model.
+        _viewModel.DiskUsageUpdated += () =>
+            Treemap.SetItems(_viewModel.DiskUsageItems.ToList(), _viewModel.DiskUsageTotal);
+        Treemap.ItemActivated += async item => await _viewModel.DrillIntoAsync(item);
     }
 
     private void BtnBrowse_Click(object sender, RoutedEventArgs e)

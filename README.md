@@ -104,6 +104,9 @@ GUI features:
   mistake.
 - **Cautious pre-selection**: only regenerable folders in clean repos or outside
   repos are checked. Large files and items in "dirty" repos stay unchecked.
+- **Disk-usage treemap**: a "Disk usage map" mode draws a squarified treemap of
+  the folder (area ∝ size); double-click a folder to drill in, "Up" to go back.
+  Read-only — it never deletes.
 - **Deletion progress**: a determinate bar (X/N) and per-item status while cleaning.
 - **Remembered preferences**: saves the configuration on scan and on close (and
   with the «Save configuration» button).

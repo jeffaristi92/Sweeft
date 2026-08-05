@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Data;
 using Sweeft.Core;
+using Sweeft.Gui;
 using Sweeft.Gui.Mvvm;
 
 namespace Sweeft.Gui.ViewModels;
@@ -29,6 +30,7 @@ public sealed class MainViewModel : ObservableObject
         SelectFoldersCommand = new RelayCommand(SelectOnlyFolders, () => Findings.Count > 0);
         AddCustomTypeCommand = new RelayCommand(AddCustomType, () => !string.IsNullOrWhiteSpace(NewTypeName));
         SaveConfigCommand = new RelayCommand(SaveConfigManually, () => !IsBusy);
+        DiskUsageUpCommand = new AsyncRelayCommand(DiskUsageUpAsync, () => !IsBusy && CanGoUp);
 
         GitAvailableText = _git.IsGitAvailable
             ? "Git detected: repository state will be shown."
@@ -60,6 +62,30 @@ public sealed class MainViewModel : ObservableObject
 
     private bool _scanGlobalCaches;
     public bool ScanGlobalCaches { get => _scanGlobalCaches; set => SetProperty(ref _scanGlobalCaches, value); }
+
+    // ---- Disk-usage (treemap) mode ----
+    private bool _diskUsageMode;
+    public bool DiskUsageMode
+    {
+        get => _diskUsageMode;
+        set { if (SetProperty(ref _diskUsageMode, value)) OnPropertyChanged(nameof(CleanupMode)); }
+    }
+    /// <summary>Inverse of <see cref="DiskUsageMode"/> (for showing the cleanup UI).</summary>
+    public bool CleanupMode => !DiskUsageMode;
+
+    public ObservableCollection<TreemapItem> DiskUsageItems { get; } = new();
+    /// <summary>Raised after the treemap items change, so the view can re-render.</summary>
+    public event Action? DiskUsageUpdated;
+
+    private readonly Stack<string> _duStack = new();
+
+    private long _diskUsageTotal;
+    public long DiskUsageTotal { get => _diskUsageTotal; private set => SetProperty(ref _diskUsageTotal, value); }
+
+    private string _diskUsagePathText = "";
+    public string DiskUsagePathText { get => _diskUsagePathText; private set => SetProperty(ref _diskUsagePathText, value); }
+
+    public bool CanGoUp => _duStack.Count > 1;
 
     private bool _onlyStaleProjects;
     public bool OnlyStaleProjects { get => _onlyStaleProjects; set => SetProperty(ref _onlyStaleProjects, value); }
@@ -123,6 +149,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand SelectFoldersCommand { get; }
     public RelayCommand AddCustomTypeCommand { get; }
     public RelayCommand SaveConfigCommand { get; }
+    public AsyncRelayCommand DiskUsageUpCommand { get; }
 
     // ---- Config <-> VM ----
     private void LoadFromConfig(AppConfig config)
@@ -215,6 +242,20 @@ public sealed class MainViewModel : ObservableObject
     // ---- Logic ----
     private async Task ScanAsync()
     {
+        if (DiskUsageMode)
+        {
+            if (!Directory.Exists(RootPath))
+            {
+                MessageBox.Show("The specified folder does not exist.", "Sweeft",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            _duStack.Clear();
+            _duStack.Push(RootPath);
+            await LoadDiskUsageAsync(RootPath);
+            return;
+        }
+
         if (ScanGlobalCaches)
         {
             await ScanGlobalAsync();
@@ -311,6 +352,55 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             MessageBox.Show($"Error during the scan:\n{ex.Message}", "Sweeft",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = "Scan interrupted by an error.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Drill into a directory in the treemap (called from the view on double-click).</summary>
+    public async Task DrillIntoAsync(TreemapItem item)
+    {
+        if (IsBusy || !item.IsDirectory) return;
+        _duStack.Push(item.Path);
+        await LoadDiskUsageAsync(item.Path);
+    }
+
+    private async Task DiskUsageUpAsync()
+    {
+        if (IsBusy || _duStack.Count <= 1) return;
+        _duStack.Pop();
+        await LoadDiskUsageAsync(_duStack.Peek());
+    }
+
+    private async Task LoadDiskUsageAsync(string path)
+    {
+        IsBusy = true;
+        IsIndeterminate = true;
+        StatusText = "Measuring disk usage…";
+        var progress = new Progress<string>(msg => StatusText = Truncate(msg, 90));
+
+        try
+        {
+            var scanner = new DiskUsageScanner();
+            DiskUsageResult result = await Task.Run(() => scanner.Scan(path, progress));
+
+            DiskUsageItems.Clear();
+            foreach (var e in result.Entries)
+                DiskUsageItems.Add(new TreemapItem(e.Name, e.Path, e.SizeBytes, e.IsDirectory));
+
+            DiskUsageTotal = result.TotalBytes;
+            DiskUsagePathText = path;
+            OnPropertyChanged(nameof(CanGoUp));
+            StatusText = $"{result.Entries.Count} item(s) · {SizeFormatter.Humanize(result.TotalBytes)} · double-click a folder to drill in.";
+            DiskUsageUpdated?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error measuring disk usage:\n{ex.Message}", "Sweeft",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             StatusText = "Scan interrupted by an error.";
         }

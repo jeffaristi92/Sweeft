@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Sweeft.Gui"
         xmlns:vm="clr-namespace:Sweeft.Gui.ViewModels"
+        xmlns:controls="clr-namespace:Sweeft.Gui.Controls"
         mc:Ignorable="d"
         Title="Sweeft — a Jeffersoft tool" Height="680" Width="1120"
         WindowStartupLocation="CenterScreen">
@@ -55,6 +56,10 @@
                         <CheckBox IsChecked="{Binding ScanGlobalCaches}" Margin="0,8,0,0"
                                   Content="Scan global caches (npm, NuGet, pip…)"
                                   ToolTip="Ignores the folder above and scans global package-manager caches."/>
+
+                        <CheckBox IsChecked="{Binding DiskUsageMode}" Margin="0,6,0,0"
+                                  Content="Disk usage map (where did my space go?)"
+                                  ToolTip="Show a treemap of the folder above. Read-only — never deletes."/>
 
                         <Separator Margin="0,12"/>
 
@@ -160,6 +165,8 @@
 
             <!-- ================= RIGHT PANEL: RESULTS ================= -->
             <Grid Grid.Column="2">
+              <!-- Cleanup view -->
+              <Grid Visibility="{Binding CleanupMode, Converter={StaticResource BoolToVis}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -270,6 +277,23 @@
                                 Background="#C0392B" Foreground="White" BorderThickness="0"/>
                     </Grid>
                 </Border>
+              </Grid>
+
+              <!-- Disk-usage treemap view -->
+              <Grid Visibility="{Binding DiskUsageMode, Converter={StaticResource BoolToVis}}">
+                  <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/>
+                      <RowDefinition Height="*"/>
+                  </Grid.RowDefinitions>
+                  <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                      <Button Content="⬆ Up" Command="{Binding DiskUsageUpCommand}" Padding="10,3" Margin="0,0,8,0"/>
+                      <TextBlock Text="{Binding DiskUsagePathText}" VerticalAlignment="Center"
+                                 Foreground="#555" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                  <Border Grid.Row="1" BorderBrush="#DDD" BorderThickness="1">
+                      <controls:TreemapView x:Name="Treemap"/>
+                  </Border>
+              </Grid>
             </Grid>
         </Grid>
     </DockPanel>
