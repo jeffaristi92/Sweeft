@@ -146,6 +146,7 @@ dotnet run --project src/Sweeft.Console -- C:\Projects --min-size 500MB --min-ag
 | `--with-files`        | Force file analysis.                                               |
 | `--stale <window>`    | Only clean regenerable folders of projects idle ≥ this long (e.g. `90d`, `6mo`). |
 | `-g, --global`        | Scan **global** package-manager caches (npm, NuGet, pip, Gradle, Cargo, Go…) instead of a folder. |
+| `--top [N]`           | "Where did my space go?" — show the N largest items under `<path>` (default 20). Read-only, never deletes. |
 | `-t, --types <list>`  | Detect **only** these types. E.g. `node_modules,bin,obj`.          |
 | `-x, --exclude <list>`| Folders to skip entirely during traversal.                         |
 | `--custom <spec>`     | Add a custom type: `name\|Category\|Description` (repeatable).      |

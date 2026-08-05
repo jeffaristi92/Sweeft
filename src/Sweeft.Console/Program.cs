@@ -60,6 +60,9 @@ internal static class Program
         if (cli.Global)
             return RunGlobal(cli);
 
+        if (cli.TopCount is { } topN)
+            return RunDiskUsage(cli, topN);
+
         if (!Directory.Exists(cli.RootPath))
         {
             WriteError($"The folder does not exist: {cli.RootPath}");
@@ -149,6 +152,74 @@ internal static class Program
         }
 
         return RunDeletionFlow(result, cli);
+    }
+
+    // ---------- Disk usage (top offenders) ----------
+
+    private static int RunDiskUsage(CliOptions cli, int topN)
+    {
+        if (!Directory.Exists(cli.RootPath))
+        {
+            WriteError($"The folder does not exist: {cli.RootPath}");
+            return 2;
+        }
+
+        var scanner = new DiskUsageScanner();
+        DiskUsageResult result;
+        try
+        {
+            IProgress<string>? progress = cli.JsonOutput ? null : MakeProgress();
+            result = scanner.Scan(cli.RootPath, progress);
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine();
+            WriteError($"Error during the scan: {ex.Message}");
+            return 1;
+        }
+
+        if (!cli.JsonOutput)
+            ClearProgressLine();
+
+        var top = result.Entries.Take(topN).ToList();
+
+        if (cli.JsonOutput)
+        {
+            var payload = new JsonDiskUsage(
+                result.Root,
+                result.TotalBytes,
+                SizeFormatter.Humanize(result.TotalBytes),
+                result.Entries.Count,
+                top.Select(e => new JsonDiskEntry(e.Path, e.Name, e.SizeBytes, e.HumanSize, e.IsDirectory)).ToList());
+            System.Console.WriteLine(JsonSerializer.Serialize(payload, ReportJsonContext.Default.JsonDiskUsage));
+            return 0;
+        }
+
+        System.Console.WriteLine("=== Sweeft — disk usage ===");
+        System.Console.WriteLine($"Root  : {result.Root}");
+        System.Console.WriteLine($"Total : {SizeFormatter.Humanize(result.TotalBytes)} across {result.Entries.Count} item(s)");
+        System.Console.WriteLine();
+
+        long max = top.Count > 0 ? Math.Max(1, top[0].SizeBytes) : 1;
+        long total = Math.Max(1, result.TotalBytes);
+        foreach (var e in top)
+        {
+            int barLen = (int)Math.Round(20.0 * e.SizeBytes / max);
+            var bar = new string('█', Math.Clamp(barLen, 0, 20)).PadRight(20);
+            int pct = (int)Math.Round(100.0 * e.SizeBytes / total);
+            var kind = e.IsDirectory ? "/" : "";
+            System.Console.WriteLine($"  {e.HumanSize,10}  {bar}  {pct,3}%  {e.Name}{kind}");
+        }
+        if (result.Entries.Count > topN)
+            System.Console.WriteLine($"  … and {result.Entries.Count - topN} more.");
+
+        if (result.Warnings.Count > 0)
+        {
+            System.Console.WriteLine();
+            WriteColored(ConsoleColor.DarkYellow,
+                $"Note: {result.Warnings.Count} subtree(s) couldn't be fully measured (access denied).");
+        }
+        return 0;
     }
 
     // ---------- Global caches ----------

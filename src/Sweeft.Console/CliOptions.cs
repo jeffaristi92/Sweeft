@@ -14,6 +14,7 @@ internal sealed class CliOptions
     public bool ShowVersion { get; private set; }
     public bool ListTypes { get; private set; }
     public bool Global { get; private set; }
+    public int? TopCount { get; private set; }
     public bool JsonOutput { get; private set; }
     public bool ReportOnly { get; private set; }
     public bool AssumeYes { get; private set; }
@@ -91,6 +92,9 @@ internal sealed class CliOptions
                     break;
                 case "--global" or "-g":
                     o.Global = true;
+                    break;
+                case "--top":
+                    o.TopCount = ParseTopCount(args, ref i);
                     break;
                 case "--json":
                     o.JsonOutput = true;
@@ -231,6 +235,17 @@ internal sealed class CliOptions
     private static TimeSpan? SafeParseDuration(string text)
         => DurationParser.TryParse(text, out var ts) ? ts : null;
 
+    /// <summary>--top with an optional count (defaults to 20 if none follows).</summary>
+    private static int ParseTopCount(string[] args, ref int i)
+    {
+        if (i + 1 < args.Length && int.TryParse(args[i + 1], out var n) && n > 0)
+        {
+            i++;
+            return n;
+        }
+        return 20;
+    }
+
     private static string RequireValue(string[] args, ref int i, string option)
     {
         if (i + 1 >= args.Length)
@@ -283,6 +298,10 @@ SCAN:
 GLOBAL CACHES:
   -g, --global          Scan global package-manager caches (npm, NuGet, pip,
                         Gradle, Maven, Cargo, Go, …) instead of a folder tree.
+
+DISK USAGE:
+      --top [N]         Show the N largest items under <path> (default 20).
+                        Read-only "where did my space go?" view; never deletes.
 
 OUTPUT:
       --list-types      List the catalog of detectable types and exit.
