@@ -167,6 +167,7 @@ dotnet run --project src/Sweeft.Console -- C:\Projects --min-size 500MB --min-ag
 
 | Option                | Description                                                        |
 |-----------------------|--------------------------------------------------------------------|
+| `-i, --tui`           | Interactive terminal picker (↑/↓, space to toggle, Enter to clean). |
 | `-y, --yes`           | Do not ask; select **everything** for deletion.                    |
 | `--recycle`           | Send to the Recycle Bin (recoverable).                             |
 | `--permanent`         | Permanent, irreversible deletion.                                  |

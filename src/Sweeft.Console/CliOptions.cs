@@ -18,6 +18,7 @@ internal sealed class CliOptions
     public bool JsonOutput { get; private set; }
     public bool ReportOnly { get; private set; }
     public bool AssumeYes { get; private set; }
+    public bool Tui { get; private set; }
     public bool Force { get; private set; }
     public bool SaveConfig { get; private set; }
     public bool NoConfig { get; private set; }
@@ -153,6 +154,9 @@ internal sealed class CliOptions
                     break;
                 case "--yes" or "-y":
                     o.AssumeYes = true;
+                    break;
+                case "--tui" or "-i":
+                    o.Tui = true;
                     break;
                 case "--force":
                     o.Force = true;
@@ -309,6 +313,8 @@ OUTPUT:
       --report-only     Only show the report; never delete.
 
 DELETION:
+  -i, --tui             Interactive terminal picker (↑/↓, space, Enter) to choose
+                        exactly what to clean.
   -y, --yes             Do not ask; select EVERYTHING for deletion.
       --recycle         Send to the Recycle Bin (recoverable).
       --permanent       Permanent, irreversible deletion.

@@ -396,6 +396,29 @@ internal static class Program
         {
             toDelete = result.Findings.ToList();
         }
+        else if (cli.Tui && TuiSelector.IsAvailable)
+        {
+            var picked = TuiSelector.Select(result.Findings);
+            if (picked is null || picked.Count == 0)
+            {
+                System.Console.WriteLine("Nothing selected. Operation cancelled.");
+                return 0;
+            }
+            toDelete = picked;
+
+            long pickedBytes = toDelete.Sum(f => f.SizeBytes);
+            System.Console.WriteLine($"{toDelete.Count} item(s) ({SizeFormatter.Humanize(pickedBytes)}) selected → {modeLabel}.");
+            if (mode == DeleteMode.Permanent)
+            {
+                System.Console.Write("This is permanent. Continue? [y/N]: ");
+                var confirmTui = System.Console.ReadLine()?.Trim().ToLowerInvariant();
+                if (confirmTui is not ("y" or "yes"))
+                {
+                    System.Console.WriteLine("Operation cancelled.");
+                    return 0;
+                }
+            }
+        }
         else
         {
             toDelete = InteractiveSelection(result);
