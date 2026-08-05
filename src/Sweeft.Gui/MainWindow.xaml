@@ -21,10 +21,15 @@
                 <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis"/>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <ProgressBar Width="200" Height="14"
-                             Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}"
-                             IsIndeterminate="{Binding IsIndeterminate}"
-                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Width="200" Height="14" VerticalAlignment="Center"
+                                 Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}"
+                                 IsIndeterminate="{Binding IsIndeterminate}"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+                    <Button Content="⏹ Stop" Command="{Binding StopCommand}"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"
+                            Padding="10,2" Margin="8,0,2,0"/>
+                </StackPanel>
             </StatusBarItem>
         </StatusBar>
 

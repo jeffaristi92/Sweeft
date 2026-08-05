@@ -13,6 +13,7 @@ public sealed class MainViewModel : ObservableObject
 {
     private readonly GitService _git = new();
     private readonly AppConfig _config;
+    private CancellationTokenSource? _cts;
 
     public MainViewModel()
     {
@@ -31,6 +32,7 @@ public sealed class MainViewModel : ObservableObject
         AddCustomTypeCommand = new RelayCommand(AddCustomType, () => !string.IsNullOrWhiteSpace(NewTypeName));
         SaveConfigCommand = new RelayCommand(SaveConfigManually, () => !IsBusy);
         DiskUsageUpCommand = new AsyncRelayCommand(DiskUsageUpAsync, () => !IsBusy && CanGoUp);
+        StopCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
 
         GitAvailableText = _git.IsGitAvailable
             ? "Git detected: repository state will be shown."
@@ -150,6 +152,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand AddCustomTypeCommand { get; }
     public RelayCommand SaveConfigCommand { get; }
     public AsyncRelayCommand DiskUsageUpCommand { get; }
+    public RelayCommand StopCommand { get; }
 
     // ---- Config <-> VM ----
     private void LoadFromConfig(AppConfig config)
@@ -325,8 +328,9 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
+            var token = BeginScan();
             var scanner = new FolderScanner(options, _git);
-            ScanResult result = await Task.Run(() => scanner.Scan(progress));
+            ScanResult result = await Task.Run(() => scanner.Scan(progress, token), token);
 
             foreach (var f in result.Findings)
             {
@@ -349,6 +353,10 @@ public sealed class MainViewModel : ObservableObject
             // Persist the configuration used (remember preferences across sessions).
             SaveConfigSilently();
         }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Scan cancelled.";
+        }
         catch (Exception ex)
         {
             MessageBox.Show($"Error during the scan:\n{ex.Message}", "Sweeft",
@@ -357,7 +365,7 @@ public sealed class MainViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            EndScan();
         }
     }
 
@@ -385,8 +393,9 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
+            var token = BeginScan();
             var scanner = new DiskUsageScanner();
-            DiskUsageResult result = await Task.Run(() => scanner.Scan(path, progress));
+            DiskUsageResult result = await Task.Run(() => scanner.Scan(path, progress, token), token);
 
             DiskUsageItems.Clear();
             foreach (var e in result.Entries)
@@ -398,6 +407,10 @@ public sealed class MainViewModel : ObservableObject
             StatusText = $"{result.Entries.Count} item(s) · {SizeFormatter.Humanize(result.TotalBytes)} · double-click a folder to drill in.";
             DiskUsageUpdated?.Invoke();
         }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Scan cancelled.";
+        }
         catch (Exception ex)
         {
             MessageBox.Show($"Error measuring disk usage:\n{ex.Message}", "Sweeft",
@@ -406,7 +419,7 @@ public sealed class MainViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            EndScan();
         }
     }
 
@@ -423,8 +436,9 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
+            var token = BeginScan();
             var scanner = new GlobalCacheScanner();
-            ScanResult result = await Task.Run(() => scanner.Scan(progress));
+            ScanResult result = await Task.Run(() => scanner.Scan(progress, token), token);
 
             foreach (var f in result.Findings)
             {
@@ -440,6 +454,10 @@ public sealed class MainViewModel : ObservableObject
                 ? "No global caches found."
                 : "Global cache scan complete. These are safe to delete — they rebuild on demand.";
         }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Scan cancelled.";
+        }
         catch (Exception ex)
         {
             MessageBox.Show($"Error during the scan:\n{ex.Message}", "Sweeft",
@@ -448,7 +466,7 @@ public sealed class MainViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            EndScan();
         }
     }
 
@@ -570,6 +588,20 @@ public sealed class MainViewModel : ObservableObject
         var selected = Findings.Where(f => f.IsSelected).ToList();
         SelectedCount = selected.Count;
         SelectedSizeText = SizeFormatter.Humanize(selected.Sum(f => f.SizeBytes));
+    }
+
+    private CancellationToken BeginScan()
+    {
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        return _cts.Token;
+    }
+
+    private void EndScan()
+    {
+        IsBusy = false;
+        _cts?.Dispose();
+        _cts = null;
     }
 
     private static string Truncate(string text, int max)
