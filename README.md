@@ -35,8 +35,12 @@ scoop install sweeft
 dotnet tool install -g Sweeft
 ```
 
-Installing via a package manager also avoids the Windows SmartScreen / antivirus
-prompt some users see when running the unsigned binary directly.
+> **Windows & antivirus.** The native binaries (direct download and Scoop) are
+> **not code-signed yet**, so some antivirus engines (e.g. McAfee) may raise a
+> false-positive and quarantine `sweeft.exe`. Until code signing is in place, on
+> Windows the most reliable install is **`dotnet tool install -g Sweeft`** — it
+> runs as managed code through the signed `dotnet` host and isn't flagged.
+> (Code signing via SignPath/Azure Trusted Signing is on the roadmap.)
 
 ### Direct download
 
