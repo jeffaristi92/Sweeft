@@ -30,6 +30,10 @@ internal sealed class CliOptions
     public bool DetectGit { get; private set; } = true;
     public bool PermanentDelete { get; private set; }
 
+    /// <summary>Raw stale window text (e.g. "90d"); empty/null = off.</summary>
+    public string? StaleText { get; private set; }
+    public TimeSpan? StaleThreshold { get; private set; }
+
     /// <summary>Explicit types (--types). If null, the config ones are used.</summary>
     public HashSet<string>? ExplicitTypes { get; private set; }
 
@@ -62,6 +66,10 @@ internal sealed class CliOptions
             DetectGit = config.DetectGitStatus,
             PermanentDelete = !config.UseRecycleBin,
             ExcludedFolderNames = config.ResolveExcluded(),
+            StaleText = config.StaleText,
+            StaleThreshold = string.IsNullOrWhiteSpace(config.StaleText)
+                ? null
+                : SafeParseDuration(config.StaleText),
         };
 
         bool pathSet = false;
@@ -96,6 +104,11 @@ internal sealed class CliOptions
 
                 case "--min-age" or "-a":
                     o.MinFileAgeDays = int.Parse(RequireValue(args, ref i, arg));
+                    break;
+
+                case "--stale":
+                    o.StaleText = RequireValue(args, ref i, arg);
+                    o.StaleThreshold = DurationParser.Parse(o.StaleText);
                     break;
 
                 case "--only-folders":
@@ -184,6 +197,7 @@ internal sealed class CliOptions
         config.UseRecycleBin = !PermanentDelete;
         config.EnabledFolderNames = effectiveEnabled.ToList();
         config.ExcludedFolderNames = ExcludedFolderNames.ToList();
+        config.StaleText = StaleText ?? "";
         foreach (var c in CustomPatterns)
             if (!config.CustomPatterns.Any(p => p.Name.Equals(c.Name, StringComparison.OrdinalIgnoreCase)))
                 config.CustomPatterns.Add(c);
@@ -209,6 +223,9 @@ internal sealed class CliOptions
         try { return SizeFormatter.ParseSize(text); }
         catch { return fallback; }
     }
+
+    private static TimeSpan? SafeParseDuration(string text)
+        => DurationParser.TryParse(text, out var ts) ? ts : null;
 
     private static string RequireValue(string[] args, ref int i, string option)
     {
@@ -251,6 +268,8 @@ SCAN:
   -a, --min-age <days>  Minimum file age in days. (default: config)
       --only-folders    Analyze folders only; skip files.
       --with-files      Force file analysis (opposite of --only-folders).
+      --stale <window>  Only clean regenerable folders of projects idle at least
+                        this long. E.g. 90d, 2w, 6mo, 1y.
   -t, --types <list>    Detect ONLY these types. E.g. node_modules,bin,obj
   -x, --exclude <list>  Folders to skip entirely during traversal.
       --custom <spec>   Add a custom type. Format: name|Category|Description

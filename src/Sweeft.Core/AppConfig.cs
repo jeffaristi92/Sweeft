@@ -21,6 +21,12 @@ public sealed class AppConfig
     /// <summary>Check the state of Git repositories.</summary>
     public bool DetectGitStatus { get; set; } = true;
 
+    /// <summary>
+    /// Stale-project window (e.g. "90d", "6mo"). When non-empty, only regenerable
+    /// folders of projects idle for at least this long are reported. Empty = off.
+    /// </summary>
+    public string StaleText { get; set; } = "";
+
     /// <summary>Send to Recycle Bin (true) or delete permanently (false).</summary>
     public bool UseRecycleBin { get; set; } = true;
 

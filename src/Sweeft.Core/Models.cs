@@ -43,6 +43,17 @@ public sealed class Finding
     /// <summary>Human-readable reason/description of the finding.</summary>
     public required string Reason { get; init; }
 
+    /// <summary>
+    /// For junk folders: the most recent activity (last-write) of the owning
+    /// project, when stale filtering is enabled. Null otherwise.
+    /// </summary>
+    public DateTime? ProjectLastActivityUtc { get; init; }
+
+    /// <summary>Days since the owning project was last active, if known.</summary>
+    public int? ProjectIdleDays => ProjectLastActivityUtc is { } t
+        ? (int)(DateTime.UtcNow - t).TotalDays
+        : null;
+
     /// <summary>Root of the Git repository containing it, or null if not applicable.</summary>
     public string? RepoRoot { get; init; }
 
@@ -85,6 +96,13 @@ public sealed class ScanOptions
 
     /// <summary>If true, detects Git repositories and checks whether they have uncommitted changes.</summary>
     public bool DetectGitStatus { get; init; } = true;
+
+    /// <summary>
+    /// If set, a regenerable folder is only reported when its owning project has
+    /// not been modified within this window (i.e. the project is "stale"). This
+    /// avoids flagging projects you are actively working on.
+    /// </summary>
+    public TimeSpan? StaleProjectThreshold { get; init; }
 
     /// <summary>Folder names to skip entirely during traversal.</summary>
     public HashSet<string> ExcludedFolderNames { get; init; } =

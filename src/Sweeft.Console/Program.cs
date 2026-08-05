@@ -85,6 +85,7 @@ internal static class Program
             EnabledFolderNames = enabled,
             DetectGitStatus = cli.DetectGit,
             ExcludedFolderNames = cli.ExcludedFolderNames,
+            StaleProjectThreshold = cli.StaleThreshold,
         };
 
         if (!cli.JsonOutput)
@@ -279,7 +280,9 @@ internal static class Program
                 f.LastModifiedUtc,
                 f.Reason,
                 f.RepoRoot,
-                f.RepoStatus.ToString())).ToList());
+                f.RepoStatus.ToString(),
+                f.ProjectLastActivityUtc,
+                f.ProjectIdleDays)).ToList());
 
         System.Console.WriteLine(JsonSerializer.Serialize(payload, ReportJsonContext.Default.JsonReport));
     }
@@ -290,6 +293,8 @@ internal static class Program
         System.Console.WriteLine($"Root      : {cli.RootPath}");
         System.Console.WriteLine($"Files     : {(opts.ScanLargeFiles ? $"> {SizeFormatter.Humanize(opts.MinLargeFileBytes)} and > {opts.MinFileAgeDays} days" : "skipped")}");
         System.Console.WriteLine($"Git       : {(opts.DetectGitStatus ? "detection on" : "off")}");
+        if (opts.StaleProjectThreshold is not null)
+            System.Console.WriteLine($"Stale     : only projects idle > {cli.StaleText}");
         if (opts.ExcludedFolderNames.Count > 0)
             System.Console.WriteLine($"Excluded  : {string.Join(", ", opts.ExcludedFolderNames)}");
         System.Console.WriteLine();
@@ -315,7 +320,8 @@ internal static class Program
                     GitRepoStatus.Unknown => "  [repo: unchecked]",
                     _ => "",
                 };
-                System.Console.WriteLine($"              {f.Reason}{repo}");
+                var idle = f.ProjectIdleDays is { } d ? $"  [project idle {d}d]" : "";
+                System.Console.WriteLine($"              {f.Reason}{repo}{idle}");
             }
         }
 

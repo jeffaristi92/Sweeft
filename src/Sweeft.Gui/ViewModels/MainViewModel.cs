@@ -58,6 +58,12 @@ public sealed class MainViewModel : ObservableObject
     private bool _detectGit = true;
     public bool DetectGit { get => _detectGit; set => SetProperty(ref _detectGit, value); }
 
+    private bool _onlyStaleProjects;
+    public bool OnlyStaleProjects { get => _onlyStaleProjects; set => SetProperty(ref _onlyStaleProjects, value); }
+
+    private string _staleText = "90d";
+    public string StaleText { get => _staleText; set => SetProperty(ref _staleText, value); }
+
     private string _excludedNamesText = "";
     public string ExcludedNamesText { get => _excludedNamesText; set => SetProperty(ref _excludedNamesText, value); }
 
@@ -124,6 +130,8 @@ public sealed class MainViewModel : ObservableObject
         ScanLargeFiles = config.ScanLargeFiles;
         DetectGit = config.DetectGitStatus;
         UseRecycleBin = config.UseRecycleBin;
+        OnlyStaleProjects = !string.IsNullOrWhiteSpace(config.StaleText);
+        StaleText = string.IsNullOrWhiteSpace(config.StaleText) ? "90d" : config.StaleText;
         ExcludedNamesText = string.Join(", ", config.ExcludedFolderNames);
 
         var enabled = config.ResolveEnabled();
@@ -143,6 +151,7 @@ public sealed class MainViewModel : ObservableObject
         _config.ScanLargeFiles = ScanLargeFiles;
         _config.DetectGitStatus = DetectGit;
         _config.UseRecycleBin = UseRecycleBin;
+        _config.StaleText = OnlyStaleProjects ? StaleText.Trim() : "";
         _config.EnabledFolderNames = Patterns.Where(p => p.IsEnabled).Select(p => p.Name).ToList();
         _config.CustomPatterns = Patterns.Where(p => p.IsCustom).Select(p => p.ToPattern()).ToList();
         _config.ExcludedFolderNames = ParseExcluded().ToList();
@@ -230,6 +239,18 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
+        TimeSpan? staleThreshold = null;
+        if (OnlyStaleProjects)
+        {
+            if (!DurationParser.TryParse(StaleText, out var ts))
+            {
+                MessageBox.Show($"Invalid stale window: '{StaleText}'. Use formats like 90d, 2w, 6mo, 1y.",
+                    "Sweeft", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            staleThreshold = ts;
+        }
+
         var options = new ScanOptions
         {
             RootPath = RootPath,
@@ -240,6 +261,7 @@ public sealed class MainViewModel : ObservableObject
             EnabledFolderNames = enabled,
             DetectGitStatus = DetectGit,
             ExcludedFolderNames = new HashSet<string>(ParseExcluded(), StringComparer.OrdinalIgnoreCase),
+            StaleProjectThreshold = staleThreshold,
         };
 
         IsBusy = true;

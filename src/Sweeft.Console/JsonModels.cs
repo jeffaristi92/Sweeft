@@ -19,7 +19,9 @@ internal sealed record JsonFinding(
     DateTime LastModifiedUtc,
     string Reason,
     string? RepoRoot,
-    string RepoStatus);
+    string RepoStatus,
+    DateTime? ProjectLastActivityUtc,
+    int? ProjectIdleDays);
 
 /// <summary>Source-generated JSON context so <c>--json</c> works under NativeAOT.</summary>
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

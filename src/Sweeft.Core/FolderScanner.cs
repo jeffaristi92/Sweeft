@@ -13,6 +13,8 @@ public sealed class FolderScanner
     private readonly GitService _git;
     private readonly ISet<string> _enabled;
     private readonly IReadOnlyDictionary<string, FolderPattern> _catalog;
+    private readonly Dictionary<string, DateTime> _projectActivityCache =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public FolderScanner(ScanOptions options, GitService? gitService = null)
     {
@@ -85,6 +87,21 @@ public sealed class FolderScanner
 
                 if (_catalog.TryGetValue(dir.Name, out var pattern) && _enabled.Contains(dir.Name))
                 {
+                    DateTime? projectActivity = null;
+                    if (_options.StaleProjectThreshold is { } threshold)
+                    {
+                        // The owning project is the folder that contains this junk
+                        // folder (e.g. the dir holding node_modules / bin / obj).
+                        var lastActivity = GetProjectLastActivity(current.FullName);
+                        if (lastActivity != DateTime.MinValue)
+                        {
+                            projectActivity = lastActivity;
+                            // Skip actively-used projects.
+                            if (DateTime.UtcNow - lastActivity < threshold)
+                                continue;
+                        }
+                    }
+
                     long size = TryCalculateDirectorySize(dir, warnings);
                     findings.Add(new Finding
                     {
@@ -94,6 +111,7 @@ public sealed class FolderScanner
                         LastModifiedUtc = dir.LastWriteTimeUtc,
                         Reason = pattern.Description,
                         RepoRoot = repoRoot,
+                        ProjectLastActivityUtc = projectActivity,
                     });
                     // Do not descend: the folder is reported as a whole block.
                     continue;
@@ -198,6 +216,58 @@ public sealed class FolderScanner
                 warnings.Add($"Could not inspect: {file.FullName} ({ex.Message})");
             }
         }
+    }
+
+    /// <summary>Most recent activity of a project, cached by project root.</summary>
+    private DateTime GetProjectLastActivity(string projectRoot)
+    {
+        if (_projectActivityCache.TryGetValue(projectRoot, out var cached))
+            return cached;
+        var result = ComputeProjectLastActivity(projectRoot);
+        _projectActivityCache[projectRoot] = result;
+        return result;
+    }
+
+    /// <summary>
+    /// Newest file last-write time under <paramref name="projectRoot"/>, skipping
+    /// regenerable (catalog) folders and <c>.git</c> — i.e. real working-tree
+    /// activity. Returns <see cref="DateTime.MinValue"/> if nothing is found.
+    /// </summary>
+    private DateTime ComputeProjectLastActivity(string projectRoot)
+    {
+        DateTime max = DateTime.MinValue;
+        var stack = new Stack<string>();
+        stack.Push(projectRoot);
+
+        while (stack.Count > 0)
+        {
+            DirectoryInfo dir;
+            try { dir = new DirectoryInfo(stack.Pop()); }
+            catch { continue; }
+
+            try
+            {
+                foreach (var file in dir.GetFiles())
+                    if (file.LastWriteTimeUtc > max)
+                        max = file.LastWriteTimeUtc;
+
+                foreach (var sub in dir.GetDirectories())
+                {
+                    if (sub.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                        continue;
+                    if (sub.Name.Equals(".git", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (_catalog.ContainsKey(sub.Name)) // skip regenerable folders
+                        continue;
+                    stack.Push(sub.FullName);
+                }
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                // Inaccessible subtree: ignored for the activity estimate.
+            }
+        }
+        return max;
     }
 
     /// <summary>Computes the total size of a folder recursively and tolerantly to errors.</summary>

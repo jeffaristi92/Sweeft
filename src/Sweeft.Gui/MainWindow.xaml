@@ -121,6 +121,22 @@
 
                         <Separator Margin="0,12"/>
 
+                        <CheckBox IsChecked="{Binding OnlyStaleProjects}" FontWeight="Bold"
+                                  Content="Only clean stale projects"/>
+                        <Grid Margin="20,6,0,0" IsEnabled="{Binding OnlyStaleProjects}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Idle for at least:" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding StaleText}" Margin="6,0,0,0" Padding="3,2"
+                                     ToolTip="e.g. 90d, 2w, 6mo, 1y"/>
+                        </Grid>
+                        <TextBlock Text="Skips projects you've touched recently (by newest file)."
+                                   FontSize="10" Foreground="Gray" Margin="20,2,0,0" TextWrapping="Wrap"/>
+
+                        <Separator Margin="0,12"/>
+
                         <TextBlock Text="Folders to skip (do not traverse)" FontWeight="Bold" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding ExcludedNamesText, UpdateSourceTrigger=PropertyChanged}"
                                  Padding="3,2" ToolTip="Comma-separated. E.g. .git, AppData"/>

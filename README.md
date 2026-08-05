@@ -70,6 +70,8 @@ GUI features:
 
 - **Fully parameterizable**: thresholds, types to detect, folders to exclude and
   delete mode. You can **add custom types** (name + description) from the panel.
+- **Stale-project filter**: optionally clean only regenerable folders of projects
+  you haven't touched in a while (e.g. `90d`), so active work is never flagged.
 - **Type selection before scanning**: every known folder (`node_modules`, `bin`,
   `obj`, `.vs`, …) can be toggled. Some ambiguous ones (`env`, `vendor`,
   `packages`) are off by default.
@@ -119,6 +121,7 @@ dotnet run --project src/Sweeft.Console -- C:\Projects --min-size 500MB --min-ag
 | `-a, --min-age <days>`| Minimum file age in days.                                          |
 | `--only-folders`      | Analyze folders only; skip files.                                  |
 | `--with-files`        | Force file analysis.                                               |
+| `--stale <window>`    | Only clean regenerable folders of projects idle ≥ this long (e.g. `90d`, `6mo`). |
 | `-t, --types <list>`  | Detect **only** these types. E.g. `node_modules,bin,obj`.          |
 | `-x, --exclude <list>`| Folders to skip entirely during traversal.                         |
 | `--custom <spec>`     | Add a custom type: `name\|Category\|Description` (repeatable).      |
