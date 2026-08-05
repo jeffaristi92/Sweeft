@@ -57,6 +57,9 @@ internal static class Program
             return 0;
         }
 
+        if (cli.Global)
+            return RunGlobal(cli);
+
         if (!Directory.Exists(cli.RootPath))
         {
             WriteError($"The folder does not exist: {cli.RootPath}");
@@ -146,6 +149,156 @@ internal static class Program
         }
 
         return RunDeletionFlow(result, cli);
+    }
+
+    // ---------- Global caches ----------
+
+    private static int RunGlobal(CliOptions cli)
+    {
+        if (!cli.JsonOutput)
+        {
+            System.Console.WriteLine("=== Sweeft — global caches ===");
+            System.Console.WriteLine();
+        }
+
+        var scanner = new GlobalCacheScanner();
+        ScanResult result;
+        try
+        {
+            IProgress<string>? progress = cli.JsonOutput ? null : MakeProgress();
+            result = scanner.Scan(progress);
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine();
+            WriteError($"Error during the scan: {ex.Message}");
+            return 1;
+        }
+
+        if (!cli.JsonOutput)
+            ClearProgressLine();
+
+        if (cli.JsonOutput)
+        {
+            PrintJson(result);
+            return 0;
+        }
+
+        var caches = result.Findings;
+        if (caches.Count == 0)
+        {
+            System.Console.WriteLine("No global caches found.");
+            return 0;
+        }
+
+        WriteColored(ConsoleColor.Cyan, $"── Global caches ({caches.Count}) ──");
+        for (int i = 0; i < caches.Count; i++)
+        {
+            var c = caches[i];
+            System.Console.WriteLine($"  [{i + 1,2}]  {c.HumanSize,10}   {c.Reason}");
+            System.Console.WriteLine($"        {c.Path}");
+        }
+        System.Console.WriteLine();
+        WriteColored(ConsoleColor.Yellow,
+            $"Total reclaimable: {SizeFormatter.Humanize(result.TotalReclaimableBytes)} " +
+            $"across {caches.Count} cache(s).");
+        System.Console.WriteLine("These caches are safe to delete — package managers rebuild them on demand.");
+
+        if (cli.ReportOnly)
+        {
+            System.Console.WriteLine("Report-only mode: nothing will be deleted.");
+            return 0;
+        }
+
+        return RunGlobalDeletion(caches, cli);
+    }
+
+    private static int RunGlobalDeletion(IReadOnlyList<Finding> caches, CliOptions cli)
+    {
+        if (cli.AssumeYes && cli.PermanentDelete && !cli.Force)
+        {
+            WriteError("Refusing to permanently delete without confirmation. " +
+                       "Add --force to combine --yes with --permanent, or use --recycle.");
+            return 2;
+        }
+
+        var mode = cli.PermanentDelete ? DeleteMode.Permanent : DeleteMode.RecycleBin;
+        var modeLabel = mode == DeleteMode.Permanent
+            ? "PERMANENT DELETION (irreversible)"
+            : "the Recycle Bin (recoverable)";
+
+        List<Finding> toDelete;
+        if (cli.AssumeYes)
+        {
+            toDelete = caches.ToList();
+        }
+        else
+        {
+            System.Console.WriteLine();
+            System.Console.Write("Enter cache numbers to delete (e.g. 1,3), 'all', or blank to cancel: ");
+            var answer = System.Console.ReadLine()?.Trim();
+            if (string.IsNullOrEmpty(answer))
+            {
+                System.Console.WriteLine("Operation cancelled.");
+                return 0;
+            }
+
+            if (answer.Equals("all", StringComparison.OrdinalIgnoreCase))
+            {
+                toDelete = caches.ToList();
+            }
+            else
+            {
+                toDelete = new List<Finding>();
+                foreach (var token in answer.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (int.TryParse(token, out var n) && n >= 1 && n <= caches.Count)
+                        toDelete.Add(caches[n - 1]);
+                    else
+                        WriteColored(ConsoleColor.DarkYellow, $"  (ignored invalid entry: '{token}')");
+                }
+            }
+
+            if (toDelete.Count == 0)
+            {
+                System.Console.WriteLine("Nothing selected. Operation cancelled.");
+                return 0;
+            }
+
+            long bytes = toDelete.Sum(f => f.SizeBytes);
+            System.Console.Write($"Delete {toDelete.Count} cache(s) ({SizeFormatter.Humanize(bytes)}) to {modeLabel}? [y/N]: ");
+            var confirm = System.Console.ReadLine()?.Trim().ToLowerInvariant();
+            if (confirm is not ("y" or "yes"))
+            {
+                System.Console.WriteLine("Operation cancelled.");
+                return 0;
+            }
+        }
+
+        var cleaner = new Cleaner();
+        long freed = 0;
+        int ok = 0, failed = 0, done = 0, total = toDelete.Count;
+        cleaner.DeleteMany(toDelete, mode, outcome =>
+        {
+            done++;
+            var prefix = $"[{done}/{total}]".PadRight(10);
+            if (outcome.Success)
+            {
+                ok++;
+                freed += outcome.FreedBytes;
+                WriteColored(ConsoleColor.Green, $"  {prefix} [OK]   {outcome.Path}");
+            }
+            else
+            {
+                failed++;
+                WriteColored(ConsoleColor.Red, $"  {prefix} [FAIL] {outcome.Path} -> {outcome.Error}");
+            }
+        });
+
+        System.Console.WriteLine();
+        System.Console.WriteLine($"Done. {ok} deleted, {failed} failed. " +
+                                 $"Space freed: {SizeFormatter.Humanize(freed)}.");
+        return failed == 0 ? 0 : 1;
     }
 
     private static int RunDeletionFlow(ScanResult result, CliOptions cli)

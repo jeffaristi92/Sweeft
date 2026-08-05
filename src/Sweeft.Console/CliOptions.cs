@@ -13,6 +13,7 @@ internal sealed class CliOptions
     public bool ShowHelp { get; private set; }
     public bool ShowVersion { get; private set; }
     public bool ListTypes { get; private set; }
+    public bool Global { get; private set; }
     public bool JsonOutput { get; private set; }
     public bool ReportOnly { get; private set; }
     public bool AssumeYes { get; private set; }
@@ -87,6 +88,9 @@ internal sealed class CliOptions
                     break;
                 case "--list-types":
                     o.ListTypes = true;
+                    break;
+                case "--global" or "-g":
+                    o.Global = true;
                     break;
                 case "--json":
                     o.JsonOutput = true;
@@ -275,6 +279,10 @@ SCAN:
       --custom <spec>   Add a custom type. Format: name|Category|Description
                         (repeatable). E.g. --custom "logs|Other|Old logs"
       --git/--no-git    Enable/disable Git repository state detection.
+
+GLOBAL CACHES:
+  -g, --global          Scan global package-manager caches (npm, NuGet, pip,
+                        Gradle, Maven, Cargo, Go, …) instead of a folder tree.
 
 OUTPUT:
       --list-types      List the catalog of detectable types and exit.

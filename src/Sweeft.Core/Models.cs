@@ -8,6 +8,9 @@ public enum FindingKind
 
     /// <summary>Old, large file worth reviewing.</summary>
     LargeOldFile,
+
+    /// <summary>Global package-manager cache (npm, NuGet, pip, Gradle, …).</summary>
+    GlobalCache,
 }
 
 /// <summary>State of the Git repository that contains a finding.</summary>

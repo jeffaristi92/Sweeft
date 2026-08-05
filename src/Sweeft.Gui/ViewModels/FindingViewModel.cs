@@ -11,10 +11,10 @@ public sealed class FindingViewModel : ObservableObject
     {
         Model = model;
         // Safe pre-selection: regenerable folders that are NOT in a repo with
-        // uncommitted changes. Large files and anything in "dirty" repos stay
-        // unchecked so the user decides explicitly.
-        _isSelected = model.Kind == FindingKind.JunkFolder
-                      && model.RepoStatus != GitRepoStatus.Dirty;
+        // uncommitted changes, and global caches (always regenerable). Large
+        // files and anything in "dirty" repos stay unchecked so the user decides.
+        _isSelected = model.Kind == FindingKind.GlobalCache
+                      || (model.Kind == FindingKind.JunkFolder && model.RepoStatus != GitRepoStatus.Dirty);
     }
 
     public Finding Model { get; }
@@ -26,7 +26,12 @@ public sealed class FindingViewModel : ObservableObject
         set => SetProperty(ref _isSelected, value);
     }
 
-    public string KindLabel => Model.Kind == FindingKind.JunkFolder ? "Folder" : "File";
+    public string KindLabel => Model.Kind switch
+    {
+        FindingKind.JunkFolder => "Folder",
+        FindingKind.GlobalCache => "Cache",
+        _ => "File",
+    };
     public string Description => Model.Reason;
     public string HumanSize => Model.HumanSize;
     public long SizeBytes => Model.SizeBytes;

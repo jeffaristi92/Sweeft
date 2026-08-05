@@ -22,7 +22,7 @@ public sealed class MainViewModel : ObservableObject
         PatternsView = CollectionViewSource.GetDefaultView(Patterns);
         PatternsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PatternToggle.Category)));
 
-        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && Directory.Exists(RootPath));
+        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && (ScanGlobalCaches || Directory.Exists(RootPath)));
         DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => !IsBusy && SelectedCount > 0);
         SelectAllCommand = new RelayCommand(() => SetAllSelected(true), () => Findings.Count > 0);
         SelectNoneCommand = new RelayCommand(() => SetAllSelected(false), () => Findings.Count > 0);
@@ -57,6 +57,9 @@ public sealed class MainViewModel : ObservableObject
 
     private bool _detectGit = true;
     public bool DetectGit { get => _detectGit; set => SetProperty(ref _detectGit, value); }
+
+    private bool _scanGlobalCaches;
+    public bool ScanGlobalCaches { get => _scanGlobalCaches; set => SetProperty(ref _scanGlobalCaches, value); }
 
     private bool _onlyStaleProjects;
     public bool OnlyStaleProjects { get => _onlyStaleProjects; set => SetProperty(ref _onlyStaleProjects, value); }
@@ -212,6 +215,12 @@ public sealed class MainViewModel : ObservableObject
     // ---- Logic ----
     private async Task ScanAsync()
     {
+        if (ScanGlobalCaches)
+        {
+            await ScanGlobalAsync();
+            return;
+        }
+
         if (!Directory.Exists(RootPath))
         {
             MessageBox.Show("The specified folder does not exist.", "Sweeft",
@@ -298,6 +307,48 @@ public sealed class MainViewModel : ObservableObject
 
             // Persist the configuration used (remember preferences across sessions).
             SaveConfigSilently();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error during the scan:\n{ex.Message}", "Sweeft",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = "Scan interrupted by an error.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task ScanGlobalAsync()
+    {
+        IsBusy = true;
+        IsIndeterminate = true;
+        Findings.Clear();
+        RecomputeSelection();
+        TotalText = "";
+        StatusText = "Scanning global caches…";
+
+        var progress = new Progress<string>(msg => StatusText = Truncate(msg, 90));
+
+        try
+        {
+            var scanner = new GlobalCacheScanner();
+            ScanResult result = await Task.Run(() => scanner.Scan(progress));
+
+            foreach (var f in result.Findings)
+            {
+                var vm = new FindingViewModel(f);
+                vm.PropertyChanged += OnFindingPropertyChanged;
+                Findings.Add(vm);
+            }
+
+            RecomputeSelection();
+            TotalText = $"{result.Findings.Count} cache(s) · " +
+                        $"{SizeFormatter.Humanize(result.TotalReclaimableBytes)} reclaimable";
+            StatusText = result.Findings.Count == 0
+                ? "No global caches found."
+                : "Global cache scan complete. These are safe to delete — they rebuild on demand.";
         }
         catch (Exception ex)
         {

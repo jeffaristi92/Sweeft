@@ -52,6 +52,10 @@
                         </Grid>
                         <TextBlock Text="{Binding CanScanHint}" Foreground="#C0392B" FontSize="11" Margin="0,3,0,0"/>
 
+                        <CheckBox IsChecked="{Binding ScanGlobalCaches}" Margin="0,8,0,0"
+                                  Content="Scan global caches (npm, NuGet, pip…)"
+                                  ToolTip="Ignores the folder above and scans global package-manager caches."/>
+
                         <Separator Margin="0,12"/>
 
                         <TextBlock Text="Folder types to detect" FontWeight="Bold" Margin="0,0,0,6"/>
