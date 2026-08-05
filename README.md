@@ -19,25 +19,21 @@ default) or permanently.
 
 The logic lives in `Core` and is reused by both the console and the GUI:
 
-| Project                      | Responsibility                                              |
-|------------------------------|-------------------------------------------------------------|
-| `DepuradorCarpetas.Core`     | Scan engine, models and deletion. No UI dependency.         |
-| `DepuradorCarpetas.Console`  | Command-line interface (report + confirmation).             |
-| `DepuradorCarpetas.Gui`      | WPF graphical interface (MVVM): type and item selection.    |
+| Project          | Responsibility                                           |
+|------------------|----------------------------------------------------------|
+| `Sweeft.Core`    | Scan engine, models and deletion. No UI dependency.      |
+| `Sweeft.Console` | Command-line interface (report + confirmation).          |
+| `Sweeft.Gui`     | WPF graphical interface (MVVM): type and item selection. |
 
 Key Core pieces: `FolderScanner` (scan + repo tracking), `KnownPatterns` (folder
 catalog with toggleable categories), `GitService` (Git repo state), `Cleaner`
 (safe deletion to the Recycle Bin via the native Windows API),
 `ScanOptions` / `ScanResult` / `Finding` (models).
 
-> Note: the product is **Sweeft**; the internal solution/namespace identifier is
-> still `DepuradorCarpetas` (a later refactor can rename it). All user-facing text,
-> comments and docs are in English.
-
 ## Graphical interface (WPF)
 
 ```bash
-dotnet run --project src/DepuradorCarpetas.Gui
+dotnet run --project src/Sweeft.Gui
 ```
 
 Flow: pick the folder, choose **which types to detect** (e.g. turn off `.vs`),
@@ -64,7 +60,7 @@ GUI features:
 ## Build
 
 ```bash
-dotnet build DepuradorCarpetas.slnx -c Release
+dotnet build Sweeft.slnx -c Release
 ```
 
 ## CLI usage
@@ -77,13 +73,13 @@ Examples:
 
 ```bash
 # Report + delete confirmation (to Recycle Bin)
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects
+dotnet run --project src/Sweeft.Console -- C:\Projects
 
 # Report only, delete nothing
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects --report-only
+dotnet run --project src/Sweeft.Console -- C:\Projects --report-only
 
 # Tune the "old and large file" thresholds
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects --min-size 500MB --min-age 365
+dotnet run --project src/Sweeft.Console -- C:\Projects --min-size 500MB --min-age 365
 ```
 
 ### CLI options
@@ -145,16 +141,16 @@ Advanced CLI examples:
 
 ```bash
 # See all types and which are enabled
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects --list-types
+dotnet run --project src/Sweeft.Console -- C:\Projects --list-types
 
 # Only certain types, no Git, JSON output to process with jq
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects --types node_modules,bin,obj --no-git --json
+dotnet run --project src/Sweeft.Console -- C:\Projects --types node_modules,bin,obj --no-git --json
 
 # Add a custom type and save it as a preference
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects --custom "logs|Other|Old logs" --save-config
+dotnet run --project src/Sweeft.Console -- C:\Projects --custom "logs|Other|Old logs" --save-config
 
 # Unattended deletion to the Recycle Bin
-dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects -y --recycle
+dotnet run --project src/Sweeft.Console -- C:\Projects -y --recycle
 ```
 
 ## Safety

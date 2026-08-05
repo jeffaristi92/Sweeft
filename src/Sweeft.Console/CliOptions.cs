@@ -1,7 +1,7 @@
 using System.Reflection;
-using DepuradorCarpetas.Core;
+using Sweeft.Core;
 
-namespace DepuradorCarpetas.ConsoleApp;
+namespace Sweeft.ConsoleApp;
 
 /// <summary>
 /// Command-line options. They are seeded from the persistent configuration

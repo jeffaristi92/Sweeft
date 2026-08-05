@@ -1,4 +1,4 @@
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>
 /// Persistent user configuration, shared between the GUI and the CLI.

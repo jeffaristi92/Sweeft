@@ -1,8 +1,8 @@
 using System.Windows.Media;
-using DepuradorCarpetas.Core;
-using DepuradorCarpetas.Gui.Mvvm;
+using Sweeft.Core;
+using Sweeft.Gui.Mvvm;
 
-namespace DepuradorCarpetas.Gui.ViewModels;
+namespace Sweeft.Gui.ViewModels;
 
 /// <summary>Wrapper around a <see cref="Finding"/> with selection state for the grid.</summary>
 public sealed class FindingViewModel : ObservableObject

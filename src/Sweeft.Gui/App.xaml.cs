@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace DepuradorCarpetas.Gui;
+namespace Sweeft.Gui;
 
 /// <summary>
 /// Interaction logic for App.xaml

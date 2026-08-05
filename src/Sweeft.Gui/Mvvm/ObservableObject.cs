@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace DepuradorCarpetas.Gui.Mvvm;
+namespace Sweeft.Gui.Mvvm;
 
 /// <summary>Base class with change notification for ViewModels.</summary>
 public abstract class ObservableObject : INotifyPropertyChanged

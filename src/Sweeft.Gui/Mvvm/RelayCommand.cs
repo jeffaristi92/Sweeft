@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace DepuradorCarpetas.Gui.Mvvm;
+namespace Sweeft.Gui.Mvvm;
 
 /// <summary>Simple synchronous command.</summary>
 public sealed class RelayCommand : ICommand

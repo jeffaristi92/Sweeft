@@ -1,4 +1,4 @@
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>Utilities for presenting byte sizes in a human-readable way.</summary>
 public static class SizeFormatter

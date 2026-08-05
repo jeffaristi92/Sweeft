@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sweeft.Console/Sweeft.Console.csproj" />
+    <Project Path="src/Sweeft.Core/Sweeft.Core.csproj" />
+    <Project Path="src/Sweeft.Gui/Sweeft.Gui.csproj" />
+  </Folder>
+</Solution>

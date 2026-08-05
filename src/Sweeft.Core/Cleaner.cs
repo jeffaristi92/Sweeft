@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>Deletion strategy to apply to a finding.</summary>
 public enum DeleteMode

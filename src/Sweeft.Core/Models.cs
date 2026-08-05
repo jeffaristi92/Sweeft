@@ -1,4 +1,4 @@
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>Classification of an item found during the scan.</summary>
 public enum FindingKind

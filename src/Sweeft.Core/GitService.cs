@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>
 /// Queries the state of Git repositories by running the 'git' client.

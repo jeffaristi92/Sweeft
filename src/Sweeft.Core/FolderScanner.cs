@@ -1,4 +1,4 @@
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>
 /// Recursively walks a folder tree detecting:

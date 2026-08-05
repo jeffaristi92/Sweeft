@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\DepuradorCarpetas.Core\DepuradorCarpetas.Core.csproj" />
+    <ProjectReference Include="..\Sweeft.Core\Sweeft.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -3,10 +3,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Data;
-using DepuradorCarpetas.Core;
-using DepuradorCarpetas.Gui.Mvvm;
+using Sweeft.Core;
+using Sweeft.Gui.Mvvm;
 
-namespace DepuradorCarpetas.Gui.ViewModels;
+namespace Sweeft.Gui.ViewModels;
 
 public sealed class MainViewModel : ObservableObject
 {

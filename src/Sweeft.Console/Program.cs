@@ -1,7 +1,7 @@
 using System.Text.Json;
-using DepuradorCarpetas.Core;
+using Sweeft.Core;
 
-namespace DepuradorCarpetas.ConsoleApp;
+namespace Sweeft.ConsoleApp;
 
 internal static class Program
 {

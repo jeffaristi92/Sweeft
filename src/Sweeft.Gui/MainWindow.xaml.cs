@@ -1,9 +1,9 @@
 using System.IO;
 using System.Windows;
-using DepuradorCarpetas.Gui.ViewModels;
+using Sweeft.Gui.ViewModels;
 using Microsoft.Win32;
 
-namespace DepuradorCarpetas.Gui;
+namespace Sweeft.Gui;
 
 /// <summary>Main window of Sweeft.</summary>
 public partial class MainWindow : Window

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>Loads and saves the <see cref="AppConfig"/> on disk (JSON).</summary>
 public static class ConfigStore

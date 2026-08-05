@@ -1,7 +1,7 @@
-using DepuradorCarpetas.Core;
-using DepuradorCarpetas.Gui.Mvvm;
+using Sweeft.Core;
+using Sweeft.Gui.Mvvm;
 
-namespace DepuradorCarpetas.Gui.ViewModels;
+namespace Sweeft.Gui.ViewModels;
 
 /// <summary>Represents a detectable folder type that the user can enable/disable.</summary>
 public sealed class PatternToggle : ObservableObject

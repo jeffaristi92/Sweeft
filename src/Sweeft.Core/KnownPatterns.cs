@@ -1,4 +1,4 @@
-namespace DepuradorCarpetas.Core;
+namespace Sweeft.Core;
 
 /// <summary>Definition of a folder pattern that is a candidate for cleanup.</summary>
 /// <param name="Name">Exact folder name (case-insensitive).</param>

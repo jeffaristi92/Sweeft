@@ -1,10 +1,10 @@
-<Window x:Class="DepuradorCarpetas.Gui.MainWindow"
+<Window x:Class="Sweeft.Gui.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DepuradorCarpetas.Gui"
-        xmlns:vm="clr-namespace:DepuradorCarpetas.Gui.ViewModels"
+        xmlns:local="clr-namespace:Sweeft.Gui"
+        xmlns:vm="clr-namespace:Sweeft.Gui.ViewModels"
         mc:Ignorable="d"
         Title="Sweeft — a Jeffersoft tool" Height="680" Width="1120"
         WindowStartupLocation="CenterScreen">
