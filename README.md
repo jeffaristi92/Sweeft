@@ -2,6 +2,10 @@
 
 > *Sweep the cruft.* — a **Jeffersoft** tool
 
+[![CI](https://github.com/jeffaristi92/Sweeft/actions/workflows/ci.yml/badge.svg)](https://github.com/jeffaristi92/Sweeft/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/)
+
 Cross-platform tool (.NET 8) that recursively scans a folder to **free up disk space**.
 It detects:
 
@@ -162,6 +166,10 @@ dotnet run --project src/Sweeft.Console -- C:\Projects -y --recycle
 - It ignores symbolic links and junctions (reparse points) to avoid cycles and
   double counting.
 - Access errors are tolerated: they are logged as warnings and the scan continues.
+
+## License
+
+Released under the [MIT License](LICENSE) © 2026 Yeferson Guarin (Jeffersoft).
 
 ### Hardening for untrusted repositories
 

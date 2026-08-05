@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build (Windows — CLI + WPF GUI)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build CLI
+        run: dotnet build src/Sweeft.Console/Sweeft.Console.csproj -c Release
+
+      - name: Build GUI
+        run: dotnet build src/Sweeft.Gui/Sweeft.Gui.csproj -c Release
+
+      # Tests will run here once a test project is added:
+      # - name: Test
+      #   run: dotnet test -c Release
+
+  build-cli-cross-platform:
+    name: Build CLI (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # The GUI targets net8.0-windows (WPF) and only builds on Windows;
+      # here we verify the cross-platform Core + CLI build cleanly.
+      - name: Build Core + CLI
+        run: dotnet build src/Sweeft.Console/Sweeft.Console.csproj -c Release

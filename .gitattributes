@@ -1,0 +1,29 @@
+# Normalize line endings: LF in the repository for every text file,
+# so the repo stays consistent across Windows/Linux/macOS.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF in the working tree.
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+
+# .NET / project files (kept LF; they are plain text/XML).
+*.cs      text
+*.csproj  text
+*.slnx    text
+*.xaml    text
+*.json    text
+*.md      text
+*.yml     text
+*.yaml    text
+
+# Binary assets (never diffed or line-ending-converted).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.dll  binary
+*.exe  binary
+*.snk  binary
