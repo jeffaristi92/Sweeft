@@ -10,11 +10,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <AssemblyName>depurador</AssemblyName>
-    <Product>Folder Cleaner</Product>
+    <AssemblyName>sweeft</AssemblyName>
+    <Product>Sweeft</Product>
+    <Company>Jeffersoft</Company>
     <Version>1.0.0</Version>
-    <Description>Detects build/dependency folders and old, heavy files to free up disk space.</Description>
-    <Authors>EmasT</Authors>
+    <Description>Sweeft — a Jeffersoft tool. Detects build/dependency folders and old, heavy files to free up disk space.</Description>
+    <Authors>Yeferson Guarin (Jeffersoft)</Authors>
   </PropertyGroup>
 
 </Project>

@@ -292,7 +292,7 @@ internal static class Program
 
     private static void PrintHeader(CliOptions cli, ScanOptions opts)
     {
-        System.Console.WriteLine("=== Folder Cleaner ===");
+        System.Console.WriteLine("=== Sweeft ===");
         System.Console.WriteLine($"Root      : {cli.RootPath}");
         System.Console.WriteLine($"Files     : {(opts.ScanLargeFiles ? $"> {SizeFormatter.Humanize(opts.MinLargeFileBytes)} and > {opts.MinFileAgeDays} days" : "skipped")}");
         System.Console.WriteLine($"Git       : {(opts.DetectGitStatus ? "detection on" : "off")}");

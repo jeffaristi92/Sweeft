@@ -222,7 +222,7 @@ internal sealed class CliOptions
     {
         var asm = Assembly.GetExecutingAssembly();
         var product = asm.GetCustomAttribute<AssemblyProductAttribute>()?.Product
-                      ?? "Folder Cleaner";
+                      ?? "Sweeft";
         var version = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
                       ?? asm.GetName().Version?.ToString()
                       ?? "1.0.0";
@@ -236,14 +236,14 @@ internal sealed class CliOptions
 
     public static void PrintUsage()
     {
-        System.Console.WriteLine(VersionInfo());
+        System.Console.WriteLine(VersionInfo() + "  —  a Jeffersoft tool");
         System.Console.WriteLine(
 """
 Detects build/dependency folders and old, heavy files to free up disk space.
 Shares its configuration with the graphical interface (GUI).
 
 USAGE:
-  depurador <path> [options]
+  sweeft <path> [options]
 
 SCAN:
   -p, --path <path>     Root folder to analyze (or the first positional argument).
@@ -277,11 +277,11 @@ CONFIGURATION (shared with the GUI):
   -v, --version         Show the version and exit.
 
 EXAMPLES:
-  depurador C:\Projects --list-types
-  depurador C:\Projects --types node_modules,bin,obj --no-git
-  depurador C:\Projects --min-size 500MB --min-age 365 --json
-  depurador C:\Projects --exclude .vs --save-config
-  depurador C:\Projects -y --recycle
+  sweeft C:\Projects --list-types
+  sweeft C:\Projects --types node_modules,bin,obj --no-git
+  sweeft C:\Projects --min-size 500MB --min-age 365 --json
+  sweeft C:\Projects --exclude .vs --save-config
+  sweeft C:\Projects -y --recycle
 """);
     }
 }

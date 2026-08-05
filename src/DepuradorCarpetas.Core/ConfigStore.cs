@@ -11,10 +11,10 @@ public static class ConfigStore
         PropertyNameCaseInsensitive = true,
     };
 
-    /// <summary>Default path: %APPDATA%\DepuradorCarpetas\config.json</summary>
+    /// <summary>Default path: %APPDATA%\Sweeft\config.json</summary>
     public static string DefaultPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "DepuradorCarpetas",
+        "Sweeft",
         "config.json");
 
     /// <summary>Loads the configuration; returns a new default one if it does not exist or fails.</summary>

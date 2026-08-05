@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:DepuradorCarpetas.Gui"
         xmlns:vm="clr-namespace:DepuradorCarpetas.Gui.ViewModels"
         mc:Ignorable="d"
-        Title="Folder Cleaner" Height="680" Width="1120"
+        Title="Sweeft — a Jeffersoft tool" Height="680" Width="1120"
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>

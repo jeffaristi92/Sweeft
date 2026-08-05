@@ -170,7 +170,7 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             MessageBox.Show($"Could not save the configuration:\n{ex.Message}",
-                "Folder Cleaner", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Sweeft", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -185,7 +185,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (Patterns.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
-            MessageBox.Show($"A type named '{name}' already exists.", "Folder Cleaner",
+            MessageBox.Show($"A type named '{name}' already exists.", "Sweeft",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -205,7 +205,7 @@ public sealed class MainViewModel : ObservableObject
     {
         if (!Directory.Exists(RootPath))
         {
-            MessageBox.Show("The specified folder does not exist.", "Folder Cleaner",
+            MessageBox.Show("The specified folder does not exist.", "Sweeft",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -215,7 +215,7 @@ public sealed class MainViewModel : ObservableObject
         catch
         {
             MessageBox.Show($"Invalid minimum size: '{MinSizeText}'. Use formats like 100MB or 1.5GB.",
-                "Folder Cleaner", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Sweeft", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -226,7 +226,7 @@ public sealed class MainViewModel : ObservableObject
         if (enabled.Count == 0 && !ScanLargeFiles)
         {
             MessageBox.Show("Nothing is selected to detect (neither folder types nor files).",
-                "Folder Cleaner", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Sweeft", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -279,7 +279,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error during the scan:\n{ex.Message}", "Folder Cleaner",
+            MessageBox.Show($"Error during the scan:\n{ex.Message}", "Sweeft",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             StatusText = "Scan interrupted by an error.";
         }

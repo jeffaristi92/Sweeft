@@ -1,6 +1,8 @@
-# Folder Cleaner
+# Sweeft
 
-Console tool (.NET 8) that recursively scans a folder to **free up disk space**.
+> *Sweep the cruft.* — a **Jeffersoft** tool
+
+Cross-platform tool (.NET 8) that recursively scans a folder to **free up disk space**.
 It detects:
 
 1. **Regenerable folders** — build artifacts, dependencies and caches
@@ -28,8 +30,9 @@ catalog with toggleable categories), `GitService` (Git repo state), `Cleaner`
 (safe deletion to the Recycle Bin via the native Windows API),
 `ScanOptions` / `ScanResult` / `Finding` (models).
 
-> Note: project and namespace names keep the `DepuradorCarpetas` identifier; all
-> user-facing text, comments and docs are in English.
+> Note: the product is **Sweeft**; the internal solution/namespace identifier is
+> still `DepuradorCarpetas` (a later refactor can rename it). All user-facing text,
+> comments and docs are in English.
 
 ## Graphical interface (WPF)
 
@@ -67,7 +70,7 @@ dotnet build DepuradorCarpetas.slnx -c Release
 ## CLI usage
 
 ```bash
-depurador <path> [options]
+sweeft <path> [options]
 ```
 
 Examples:
@@ -131,7 +134,7 @@ dotnet run --project src/DepuradorCarpetas.Console -- C:\Projects --min-size 500
 Both the GUI and the CLI read and write the same configuration at:
 
 ```
-%APPDATA%\DepuradorCarpetas\config.json
+%APPDATA%\Sweeft\config.json
 ```
 
 It remembers: last folder, thresholds, enabled types, **custom types**, excluded

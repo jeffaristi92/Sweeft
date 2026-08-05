@@ -5,7 +5,7 @@ using Microsoft.Win32;
 
 namespace DepuradorCarpetas.Gui;
 
-/// <summary>Main window of Folder Cleaner.</summary>
+/// <summary>Main window of Sweeft.</summary>
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel = new();
