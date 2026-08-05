@@ -19,6 +19,28 @@ It shows a report sorted by size (largest first) and, after your confirmation,
 deletes the chosen items by **sending them to the Recycle Bin** (recoverable by
 default) or permanently.
 
+## Install
+
+Grab a **single native binary** (no .NET runtime required) from the
+[latest release](https://github.com/jeffaristi92/Sweeft/releases/latest):
+
+| Platform            | Asset                              |
+|---------------------|------------------------------------|
+| Windows (x64)       | `sweeft-<version>-win-x64.zip`     |
+| Linux (x64)         | `sweeft-<version>-linux-x64.tar.gz`|
+| macOS (Apple silicon)| `sweeft-<version>-osx-arm64.tar.gz`|
+| macOS (Intel)       | `sweeft-<version>-osx-x64.tar.gz`  |
+
+Unpack and run `sweeft` (add it to your `PATH` to use it anywhere):
+
+```bash
+# Linux / macOS
+tar -xzf sweeft-*.tar.gz && chmod +x sweeft && ./sweeft --version
+```
+
+The binaries are built with **NativeAOT** — they start instantly and need no
+installed runtime. From source, `dotnet run --project src/Sweeft.Console` works too.
+
 ## Architecture
 
 The logic lives in `Core` and is reused by both the console and the GUI:

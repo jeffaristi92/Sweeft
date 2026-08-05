@@ -265,29 +265,23 @@ internal static class Program
 
     private static void PrintJson(ScanResult result)
     {
-        var payload = new
-        {
-            totalReclaimableBytes = result.TotalReclaimableBytes,
-            totalReclaimableHuman = SizeFormatter.Humanize(result.TotalReclaimableBytes),
-            count = result.Findings.Count,
-            warnings = result.Warnings,
-            findings = result.Findings.Select(f => new
-            {
-                kind = f.Kind.ToString(),
-                path = f.Path,
-                sizeBytes = f.SizeBytes,
-                sizeHuman = f.HumanSize,
-                ageDays = f.AgeDays,
-                lastModifiedUtc = f.LastModifiedUtc,
-                reason = f.Reason,
-                repoRoot = f.RepoRoot,
-                repoStatus = f.RepoStatus.ToString(),
-            }),
-        };
-        System.Console.WriteLine(JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        }));
+        var payload = new JsonReport(
+            result.TotalReclaimableBytes,
+            SizeFormatter.Humanize(result.TotalReclaimableBytes),
+            result.Findings.Count,
+            result.Warnings,
+            result.Findings.Select(f => new JsonFinding(
+                f.Kind.ToString(),
+                f.Path,
+                f.SizeBytes,
+                f.HumanSize,
+                f.AgeDays,
+                f.LastModifiedUtc,
+                f.Reason,
+                f.RepoRoot,
+                f.RepoStatus.ToString())).ToList());
+
+        System.Console.WriteLine(JsonSerializer.Serialize(payload, ReportJsonContext.Default.JsonReport));
     }
 
     private static void PrintHeader(CliOptions cli, ScanOptions opts)

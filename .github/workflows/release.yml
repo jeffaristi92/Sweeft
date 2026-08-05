@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+jobs:
+  build:
+    name: Build ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-latest
+            rid: osx-arm64
+          - os: macos-13
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install NativeAOT prerequisites (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Publish (NativeAOT)
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          dotnet publish src/Sweeft.Console/Sweeft.Console.csproj \
+            -c Release -r ${{ matrix.rid }} -p:Version="$VER" -o publish
+
+      - name: Package
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          NAME="sweeft-${VER}-${{ matrix.rid }}"
+          mkdir -p dist
+          cd publish
+          if [ -f sweeft.exe ]; then
+            7z a "../dist/${NAME}.zip" sweeft.exe
+          else
+            chmod +x sweeft
+            tar -czf "../dist/${NAME}.tar.gz" sweeft
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

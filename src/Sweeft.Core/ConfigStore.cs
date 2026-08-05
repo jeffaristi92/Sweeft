@@ -5,12 +5,6 @@ namespace Sweeft.Core;
 /// <summary>Loads and saves the <see cref="AppConfig"/> on disk (JSON).</summary>
 public static class ConfigStore
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        PropertyNameCaseInsensitive = true,
-    };
-
     /// <summary>Default path: %APPDATA%\Sweeft\config.json</summary>
     public static string DefaultPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -24,7 +18,7 @@ public static class ConfigStore
         try
         {
             if (File.Exists(path))
-                return JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(path), Options)
+                return JsonSerializer.Deserialize(File.ReadAllText(path), AppConfigJsonContext.Default.AppConfig)
                        ?? new AppConfig();
         }
         catch
@@ -41,6 +35,6 @@ public static class ConfigStore
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir))
             Directory.CreateDirectory(dir);
-        File.WriteAllText(path, JsonSerializer.Serialize(config, Options));
+        File.WriteAllText(path, JsonSerializer.Serialize(config, AppConfigJsonContext.Default.AppConfig));
     }
 }

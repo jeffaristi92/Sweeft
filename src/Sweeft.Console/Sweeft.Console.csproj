@@ -16,6 +16,11 @@
     <Version>1.0.0</Version>
     <Description>Sweeft — a Jeffersoft tool. Detects build/dependency folders and old, heavy files to free up disk space.</Description>
     <Authors>Yeferson Guarin (Jeffersoft)</Authors>
+
+    <!-- NativeAOT single-binary publishing (applies to `dotnet publish -r <rid>`). -->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
   </PropertyGroup>
 
 </Project>
