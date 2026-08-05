@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DepuradorCarpetas.Console/DepuradorCarpetas.Console.csproj" />
+    <Project Path="src/DepuradorCarpetas.Core/DepuradorCarpetas.Core.csproj" />
+    <Project Path="src/DepuradorCarpetas.Gui/DepuradorCarpetas.Gui.csproj" />
+  </Folder>
+</Solution>

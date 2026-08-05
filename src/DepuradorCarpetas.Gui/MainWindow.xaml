@@ -1,0 +1,256 @@
+<Window x:Class="DepuradorCarpetas.Gui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DepuradorCarpetas.Gui"
+        xmlns:vm="clr-namespace:DepuradorCarpetas.Gui.ViewModels"
+        mc:Ignorable="d"
+        Title="Folder Cleaner" Height="680" Width="1120"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Bottom status bar -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <ProgressBar Width="200" Height="14"
+                             Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}"
+                             IsIndeterminate="{Binding IsIndeterminate}"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ================= LEFT PANEL: OPTIONS ================= -->
+            <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4"
+                    IsEnabled="{Binding IsIdle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Folder to analyze" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding RootPath, UpdateSourceTrigger=PropertyChanged}"
+                                     VerticalContentAlignment="Center" Padding="4,3"/>
+                            <Button Grid.Column="1" Content="Browse…" x:Name="BtnBrowse"
+                                    Margin="6,0,0,0" Padding="10,3" Click="BtnBrowse_Click"/>
+                        </Grid>
+                        <TextBlock Text="{Binding CanScanHint}" Foreground="#C0392B" FontSize="11" Margin="0,3,0,0"/>
+
+                        <Separator Margin="0,12"/>
+
+                        <TextBlock Text="Folder types to detect" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <ItemsControl ItemsSource="{Binding PatternsView}">
+                            <ItemsControl.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       Foreground="#2C3E50" Margin="0,8,0,2"/>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ItemsControl.GroupStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsEnabled}" Margin="6,1"
+                                              ToolTip="{Binding Description}">
+                                        <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis"/>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Add custom type -->
+                        <Border Background="#F4F6F8" CornerRadius="3" Padding="8" Margin="0,8,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Add custom type" FontWeight="SemiBold" FontSize="12"/>
+                                <TextBox Text="{Binding NewTypeName, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,4,0,0" Padding="3,2"
+                                         ToolTip="Exact folder name, e.g. logs"/>
+                                <TextBlock Text="Folder name (e.g. logs)" FontSize="10" Foreground="Gray"/>
+                                <TextBox Text="{Binding NewTypeDescription, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,4,0,0" Padding="3,2"
+                                         ToolTip="Optional description"/>
+                                <TextBlock Text="Description (optional)" FontSize="10" Foreground="Gray"/>
+                                <Button Content="＋ Add" Command="{Binding AddCustomTypeCommand}"
+                                        Margin="0,6,0,0" Padding="8,3" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Separator Margin="0,12"/>
+
+                        <CheckBox IsChecked="{Binding ScanLargeFiles}" FontWeight="Bold"
+                                  Content="Detect old, large files"/>
+                        <Grid Margin="20,6,0,0" IsEnabled="{Binding ScanLargeFiles}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Minimum size:" VerticalAlignment="Center" Margin="0,3"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding MinSizeText}" Margin="6,3" Padding="3,2"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Age (days):" VerticalAlignment="Center" Margin="0,3"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MinAgeDays}" Margin="6,3" Padding="3,2"/>
+                        </Grid>
+
+                        <Separator Margin="0,12"/>
+
+                        <CheckBox IsChecked="{Binding DetectGit}" FontWeight="Bold"
+                                  Content="Detect Git repository state"/>
+                        <TextBlock Text="{Binding GitAvailableText}" Foreground="Gray"
+                                   FontSize="11" TextWrapping="Wrap" Margin="20,4,0,0"/>
+
+                        <Separator Margin="0,12"/>
+
+                        <TextBlock Text="Folders to skip (do not traverse)" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding ExcludedNamesText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="3,2" ToolTip="Comma-separated. E.g. .git, AppData"/>
+                        <TextBlock Text="Comma-separated (e.g. .git, AppData)" FontSize="10" Foreground="Gray"/>
+
+                        <Button Content="🔍  Scan" Command="{Binding ScanCommand}"
+                                Margin="0,18,0,0" Padding="0,10" FontSize="14" FontWeight="Bold"
+                                Background="#2C7BE5" Foreground="White" BorderThickness="0"/>
+                        <Button Content="💾 Save configuration" Command="{Binding SaveConfigCommand}"
+                                Margin="0,8,0,0" Padding="0,6"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          Background="Transparent"/>
+
+            <!-- ================= RIGHT PANEL: RESULTS ================= -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Selection toolbar -->
+                <Grid Grid.Row="0" Margin="0,0,0,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Select all" Command="{Binding SelectAllCommand}" Padding="8,3" Margin="0,0,6,0"/>
+                        <Button Content="None" Command="{Binding SelectNoneCommand}" Padding="8,3" Margin="0,0,6,0"/>
+                        <Button Content="Folders only" Command="{Binding SelectFoldersCommand}" Padding="8,3"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding TotalText}" HorizontalAlignment="Right"
+                               VerticalAlignment="Center" Foreground="#555" FontWeight="SemiBold"/>
+                </Grid>
+
+                <!-- Results grid -->
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Findings}"
+                          AutoGenerateColumns="False" CanUserAddRows="False"
+                          CanUserDeleteRows="False" IsReadOnly="False"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                          RowHeaderWidth="0" SelectionMode="Extended"
+                          BorderBrush="#DDD" BorderThickness="1">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRisky}" Value="True">
+                                    <Setter Property="Background" Value="#FFF3E0"/>
+                                    <Setter Property="ToolTip"
+                                            Value="This item is in a repository with uncommitted changes. Review it before deleting."/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="✓" Width="34" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Type" Binding="{Binding KindLabel}" Width="Auto" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="1.2*" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Size" Binding="{Binding HumanSize}"
+                                            SortMemberPath="SizeBytes" Width="Auto" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="FontFamily" Value="Consolas"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Age" Binding="{Binding AgeDays, StringFormat={}{0} d}"
+                                            Width="Auto" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTemplateColumn Header="Repository" Width="Auto" SortMemberPath="RepoStatusText">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding RepoStatusText}"
+                                               Foreground="{Binding RepoStatusBrush}"
+                                               FontWeight="SemiBold" Margin="4,0"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="2*" IsReadOnly="True"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Footer: selection + delete mode + action -->
+                <Border Grid.Row="2" Margin="0,8,0,0" Padding="10" Background="#F7F9FB"
+                        BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock>
+                                <Run Text="Selected: " FontWeight="Bold"/>
+                                <Run Text="{Binding SelectedCount, Mode=OneWay}" FontWeight="Bold"/>
+                                <Run Text=" item(s) · "/>
+                                <Run Text="{Binding SelectedSizeText, Mode=OneWay}" FontWeight="Bold" Foreground="#2C7BE5"/>
+                            </TextBlock>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <RadioButton Content="Send to Recycle Bin (recoverable)"
+                                             GroupName="DeleteMode" Margin="0,0,16,0"
+                                             IsChecked="{Binding UseRecycleBin, Mode=TwoWay}"/>
+                                <RadioButton Content="Permanent deletion" GroupName="DeleteMode"
+                                             Foreground="#C0392B"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Content="🗑  Clean selected"
+                                Command="{Binding DeleteCommand}" VerticalAlignment="Center"
+                                Padding="16,10" FontSize="14" FontWeight="Bold"
+                                Background="#C0392B" Foreground="White" BorderThickness="0"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

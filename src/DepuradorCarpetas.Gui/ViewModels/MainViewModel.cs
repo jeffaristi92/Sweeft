@@ -1,0 +1,414 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Windows;
+using System.Windows.Data;
+using DepuradorCarpetas.Core;
+using DepuradorCarpetas.Gui.Mvvm;
+
+namespace DepuradorCarpetas.Gui.ViewModels;
+
+public sealed class MainViewModel : ObservableObject
+{
+    private readonly GitService _git = new();
+    private readonly AppConfig _config;
+
+    public MainViewModel()
+    {
+        _config = ConfigStore.Load();
+        LoadFromConfig(_config);
+
+        // Grouped view by category to present the types in an ordered way.
+        PatternsView = CollectionViewSource.GetDefaultView(Patterns);
+        PatternsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(PatternToggle.Category)));
+
+        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && Directory.Exists(RootPath));
+        DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => !IsBusy && SelectedCount > 0);
+        SelectAllCommand = new RelayCommand(() => SetAllSelected(true), () => Findings.Count > 0);
+        SelectNoneCommand = new RelayCommand(() => SetAllSelected(false), () => Findings.Count > 0);
+        SelectFoldersCommand = new RelayCommand(SelectOnlyFolders, () => Findings.Count > 0);
+        AddCustomTypeCommand = new RelayCommand(AddCustomType, () => !string.IsNullOrWhiteSpace(NewTypeName));
+        SaveConfigCommand = new RelayCommand(SaveConfigManually, () => !IsBusy);
+
+        GitAvailableText = _git.IsGitAvailable
+            ? "Git detected: repository state will be shown."
+            : "Git is not installed: repositories will be marked as 'unchecked'.";
+    }
+
+    // ---- Scan configuration ----
+    private string _rootPath = "";
+    public string RootPath
+    {
+        get => _rootPath;
+        set { if (SetProperty(ref _rootPath, value)) OnPropertyChanged(nameof(CanScanHint)); }
+    }
+
+    public ObservableCollection<PatternToggle> Patterns { get; } = new();
+    public ICollectionView PatternsView { get; private set; } = null!;
+
+    private bool _scanLargeFiles = true;
+    public bool ScanLargeFiles { get => _scanLargeFiles; set => SetProperty(ref _scanLargeFiles, value); }
+
+    private string _minSizeText = "100MB";
+    public string MinSizeText { get => _minSizeText; set => SetProperty(ref _minSizeText, value); }
+
+    private int _minAgeDays = 180;
+    public int MinAgeDays { get => _minAgeDays; set => SetProperty(ref _minAgeDays, value); }
+
+    private bool _detectGit = true;
+    public bool DetectGit { get => _detectGit; set => SetProperty(ref _detectGit, value); }
+
+    private string _excludedNamesText = "";
+    public string ExcludedNamesText { get => _excludedNamesText; set => SetProperty(ref _excludedNamesText, value); }
+
+    public string GitAvailableText { get; }
+
+    // ---- Custom type input ----
+    private string _newTypeName = "";
+    public string NewTypeName { get => _newTypeName; set => SetProperty(ref _newTypeName, value); }
+    private string _newTypeDescription = "";
+    public string NewTypeDescription { get => _newTypeDescription; set => SetProperty(ref _newTypeDescription, value); }
+
+    // ---- Results ----
+    public ObservableCollection<FindingViewModel> Findings { get; } = new();
+
+    private bool _isBusy;
+    public bool IsBusy
+    {
+        get => _isBusy;
+        set { if (SetProperty(ref _isBusy, value)) OnPropertyChanged(nameof(IsIdle)); }
+    }
+    public bool IsIdle => !IsBusy;
+
+    private string _statusText = "Select a folder and click «Scan».";
+    public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
+
+    // Progress: indeterminate during the scan, determinate during deletion.
+    private bool _isIndeterminate = true;
+    public bool IsIndeterminate { get => _isIndeterminate; set => SetProperty(ref _isIndeterminate, value); }
+    private double _progressValue;
+    public double ProgressValue { get => _progressValue; set => SetProperty(ref _progressValue, value); }
+    private double _progressMax = 1;
+    public double ProgressMax { get => _progressMax; set => SetProperty(ref _progressMax, value); }
+
+    private int _selectedCount;
+    public int SelectedCount { get => _selectedCount; private set => SetProperty(ref _selectedCount, value); }
+
+    private string _selectedSizeText = "0 B";
+    public string SelectedSizeText { get => _selectedSizeText; private set => SetProperty(ref _selectedSizeText, value); }
+
+    private string _totalText = "";
+    public string TotalText { get => _totalText; private set => SetProperty(ref _totalText, value); }
+
+    private bool _useRecycleBin = true;
+    public bool UseRecycleBin { get => _useRecycleBin; set => SetProperty(ref _useRecycleBin, value); }
+
+    public string CanScanHint => string.IsNullOrWhiteSpace(RootPath) || Directory.Exists(RootPath)
+        ? "" : "The specified folder does not exist.";
+
+    // ---- Commands ----
+    public AsyncRelayCommand ScanCommand { get; }
+    public AsyncRelayCommand DeleteCommand { get; }
+    public RelayCommand SelectAllCommand { get; }
+    public RelayCommand SelectNoneCommand { get; }
+    public RelayCommand SelectFoldersCommand { get; }
+    public RelayCommand AddCustomTypeCommand { get; }
+    public RelayCommand SaveConfigCommand { get; }
+
+    // ---- Config <-> VM ----
+    private void LoadFromConfig(AppConfig config)
+    {
+        RootPath = config.LastRootPath ?? "";
+        MinSizeText = config.MinSizeText;
+        MinAgeDays = config.MinFileAgeDays;
+        ScanLargeFiles = config.ScanLargeFiles;
+        DetectGit = config.DetectGitStatus;
+        UseRecycleBin = config.UseRecycleBin;
+        ExcludedNamesText = string.Join(", ", config.ExcludedFolderNames);
+
+        var enabled = config.ResolveEnabled();
+        var customNames = new HashSet<string>(
+            config.CustomPatterns.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+
+        Patterns.Clear();
+        foreach (var pattern in config.AllPatterns())
+            Patterns.Add(new PatternToggle(pattern, enabled.Contains(pattern.Name), customNames.Contains(pattern.Name)));
+    }
+
+    private void ApplyToConfig()
+    {
+        _config.LastRootPath = RootPath;
+        _config.MinSizeText = MinSizeText;
+        _config.MinFileAgeDays = MinAgeDays;
+        _config.ScanLargeFiles = ScanLargeFiles;
+        _config.DetectGitStatus = DetectGit;
+        _config.UseRecycleBin = UseRecycleBin;
+        _config.EnabledFolderNames = Patterns.Where(p => p.IsEnabled).Select(p => p.Name).ToList();
+        _config.CustomPatterns = Patterns.Where(p => p.IsCustom).Select(p => p.ToPattern()).ToList();
+        _config.ExcludedFolderNames = ParseExcluded().ToList();
+    }
+
+    /// <summary>Saves the configuration; swallows errors so the app is not interrupted.</summary>
+    public void SaveConfigSilently()
+    {
+        try
+        {
+            ApplyToConfig();
+            ConfigStore.Save(_config);
+        }
+        catch { /* non-critical */ }
+    }
+
+    private void SaveConfigManually()
+    {
+        try
+        {
+            ApplyToConfig();
+            ConfigStore.Save(_config);
+            StatusText = $"Configuration saved to {ConfigStore.DefaultPath}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not save the configuration:\n{ex.Message}",
+                "Folder Cleaner", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private IEnumerable<string> ParseExcluded()
+        => ExcludedNamesText
+            .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private void AddCustomType()
+    {
+        var name = NewTypeName.Trim();
+        if (name.Length == 0) return;
+
+        if (Patterns.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            MessageBox.Show($"A type named '{name}' already exists.", "Folder Cleaner",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var desc = string.IsNullOrWhiteSpace(NewTypeDescription) ? "Custom pattern" : NewTypeDescription.Trim();
+        var pattern = new FolderPattern(name, "Custom", desc, EnabledByDefault: true);
+        Patterns.Add(new PatternToggle(pattern, isEnabled: true, isCustom: true));
+        PatternsView.Refresh();
+
+        NewTypeName = "";
+        NewTypeDescription = "";
+        StatusText = $"Custom type '{name}' added. Remember to scan.";
+    }
+
+    // ---- Logic ----
+    private async Task ScanAsync()
+    {
+        if (!Directory.Exists(RootPath))
+        {
+            MessageBox.Show("The specified folder does not exist.", "Folder Cleaner",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        long minSize;
+        try { minSize = SizeFormatter.ParseSize(MinSizeText); }
+        catch
+        {
+            MessageBox.Show($"Invalid minimum size: '{MinSizeText}'. Use formats like 100MB or 1.5GB.",
+                "Folder Cleaner", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var catalog = Patterns.Select(p => p.ToPattern()).ToList();
+        var enabled = new HashSet<string>(
+            Patterns.Where(p => p.IsEnabled).Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+
+        if (enabled.Count == 0 && !ScanLargeFiles)
+        {
+            MessageBox.Show("Nothing is selected to detect (neither folder types nor files).",
+                "Folder Cleaner", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var options = new ScanOptions
+        {
+            RootPath = RootPath,
+            MinLargeFileBytes = minSize,
+            MinFileAgeDays = MinAgeDays,
+            ScanLargeFiles = ScanLargeFiles,
+            FolderPatterns = catalog,
+            EnabledFolderNames = enabled,
+            DetectGitStatus = DetectGit,
+            ExcludedFolderNames = new HashSet<string>(ParseExcluded(), StringComparer.OrdinalIgnoreCase),
+        };
+
+        IsBusy = true;
+        IsIndeterminate = true;
+        Findings.Clear();
+        RecomputeSelection();
+        TotalText = "";
+        StatusText = "Scanning…";
+
+        var progress = new Progress<string>(msg => StatusText = Truncate(msg, 90));
+
+        try
+        {
+            var scanner = new FolderScanner(options, _git);
+            ScanResult result = await Task.Run(() => scanner.Scan(progress));
+
+            foreach (var f in result.Findings)
+            {
+                var vm = new FindingViewModel(f);
+                vm.PropertyChanged += OnFindingPropertyChanged;
+                Findings.Add(vm);
+            }
+
+            RecomputeSelection();
+
+            var dirty = result.Findings.Count(f => f.RepoStatus == GitRepoStatus.Dirty);
+            TotalText = $"{result.Findings.Count} item(s) · " +
+                        $"{SizeFormatter.Humanize(result.TotalReclaimableBytes)} reclaimable" +
+                        (dirty > 0 ? $" · {dirty} in repos with uncommitted changes" : "");
+
+            StatusText = result.Findings.Count == 0
+                ? "No candidate items were found."
+                : $"Scan complete. {result.Warnings.Count} warning(s).";
+
+            // Persist the configuration used (remember preferences across sessions).
+            SaveConfigSilently();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error during the scan:\n{ex.Message}", "Folder Cleaner",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = "Scan interrupted by an error.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        var selected = Findings.Where(f => f.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        var mode = UseRecycleBin ? DeleteMode.RecycleBin : DeleteMode.Permanent;
+        var modeLabel = UseRecycleBin
+            ? "will be sent to the Recycle Bin (recoverable)"
+            : "will be PERMANENTLY DELETED (irreversible)";
+
+        long bytes = selected.Sum(f => f.SizeBytes);
+        int dirty = selected.Count(f => f.IsRisky);
+        var warn = dirty > 0
+            ? $"\n\n⚠ Warning: {dirty} of these items are in repositories with uncommitted changes."
+            : "";
+
+        var confirm = MessageBox.Show(
+            $"{selected.Count} item(s) will be deleted ({SizeFormatter.Humanize(bytes)}).\n" +
+            $"The items {modeLabel}.{warn}\n\nDo you want to continue?",
+            "Confirm cleanup",
+            MessageBoxButton.YesNo,
+            dirty > 0 ? MessageBoxImage.Warning : MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        IsBusy = true;
+        IsIndeterminate = false;
+        ProgressMax = selected.Count;
+        ProgressValue = 0;
+        StatusText = "Deleting…";
+
+        var dispatcher = Application.Current.Dispatcher;
+
+        try
+        {
+            var cleaner = new Cleaner();
+            long freed = 0;
+            int ok = 0, failed = 0, done = 0;
+            var errors = new List<string>();
+
+            await Task.Run(() =>
+            {
+                foreach (var vm in selected)
+                {
+                    var outcome = cleaner.Delete(vm.Model, mode);
+                    done++;
+                    int localDone = done;
+
+                    if (outcome.Success)
+                    {
+                        ok++;
+                        freed += outcome.FreedBytes;
+                    }
+                    else
+                    {
+                        failed++;
+                        errors.Add($"{vm.Path}: {outcome.Error}");
+                    }
+
+                    // Report progress to the UI thread.
+                    dispatcher.Invoke(() =>
+                    {
+                        ProgressValue = localDone;
+                        StatusText = $"Deleting {localDone}/{selected.Count}: {Truncate(vm.Path, 70)}";
+                        if (outcome.Success)
+                        {
+                            vm.PropertyChanged -= OnFindingPropertyChanged;
+                            Findings.Remove(vm);
+                        }
+                    });
+                }
+            });
+
+            RecomputeSelection();
+            StatusText = $"Done. {ok} deleted, {failed} failed. " +
+                         $"Space freed: {SizeFormatter.Humanize(freed)}.";
+
+            if (errors.Count > 0)
+            {
+                MessageBox.Show(
+                    "Some items could not be deleted:\n\n" +
+                    string.Join("\n", errors.Take(10)) +
+                    (errors.Count > 10 ? $"\n… and {errors.Count - 10} more." : ""),
+                    "Cleanup with errors", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            IsIndeterminate = true;
+        }
+    }
+
+    private void OnFindingPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(FindingViewModel.IsSelected))
+            RecomputeSelection();
+    }
+
+    private void SetAllSelected(bool value)
+    {
+        foreach (var f in Findings) f.IsSelected = value;
+        RecomputeSelection();
+    }
+
+    private void SelectOnlyFolders()
+    {
+        foreach (var f in Findings)
+            f.IsSelected = f.Model.Kind == FindingKind.JunkFolder;
+        RecomputeSelection();
+    }
+
+    private void RecomputeSelection()
+    {
+        var selected = Findings.Where(f => f.IsSelected).ToList();
+        SelectedCount = selected.Count;
+        SelectedSizeText = SizeFormatter.Humanize(selected.Sum(f => f.SizeBytes));
+    }
+
+    private static string Truncate(string text, int max)
+        => text.Length <= max ? text : "…" + text[^(max - 1)..];
+}
