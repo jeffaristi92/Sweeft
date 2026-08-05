@@ -41,6 +41,20 @@ dotnet tool install -g Sweeft
 > Windows the most reliable install is **`dotnet tool install -g Sweeft`** — it
 > runs as managed code through the signed `dotnet` host and isn't flagged.
 > (Code signing via SignPath/Azure Trusted Signing is on the roadmap.)
+>
+> **Verify it yourself.** Every release is automatically scanned on VirusTotal
+> (links in each release's notes). The Linux and macOS binaries come back clean
+> (0 detections); the unsigned Windows binary trips ~3 of 70 machine-learning
+> engines (Google, Ikarus, McAfee) with generic/misattributed labels — a known
+> false positive for unsigned .NET NativeAOT executables. The scanned hash
+> matches exactly what Scoop installs and what CI built from source. For v1.1.0:
+> [win-x64](https://www.virustotal.com/gui/file/135d9821028ea877056219643be37bec39b5b70725d9de8577d9bc5439f0f93f)
+> ·
+> [linux-x64](https://www.virustotal.com/gui/file/45088a66a3daf9dc416b87e6c98219eead111d79a2ccad77f3e62992c6b0e670)
+> ·
+> [osx-arm64](https://www.virustotal.com/gui/file/6273044cd7be5d2417a3d39996fe31edebabdc1994f1431ffdd0965e39fb1b6f)
+> ·
+> [osx-x64](https://www.virustotal.com/gui/file/5a6538e09862e2e74426f2de944e697fc6f89cec93ea30c170dde79edeb06b36)
 
 ### Direct download
 
