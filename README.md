@@ -21,6 +21,25 @@ default) or permanently.
 
 ## Install
 
+### Package managers (recommended)
+
+```bash
+# macOS / Linux — Homebrew
+brew install jeffaristi92/tap/sweeft
+
+# Windows — Scoop
+scoop bucket add sweeft https://github.com/jeffaristi92/scoop-bucket
+scoop install sweeft
+
+# Any OS with the .NET SDK — global tool
+dotnet tool install -g Sweeft
+```
+
+Installing via a package manager also avoids the Windows SmartScreen / antivirus
+prompt some users see when running the unsigned binary directly.
+
+### Direct download
+
 Grab a **single native binary** (no .NET runtime required) from the
 [latest release](https://github.com/jeffaristi92/Sweeft/releases/latest):
 

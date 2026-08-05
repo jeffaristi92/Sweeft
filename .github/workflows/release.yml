@@ -43,7 +43,7 @@ jobs:
           for rid in ${{ matrix.rids }}; do
             echo "::group::publish $rid"
             dotnet publish src/Sweeft.Console/Sweeft.Console.csproj \
-              -c Release -r "$rid" -p:Version="$VER" -o "publish/$rid"
+              -c Release -r "$rid" -p:PublishAot=true -p:Version="$VER" -o "publish/$rid"
             NAME="sweeft-${VER}-${rid}"
             if [ "$rid" = "win-x64" ]; then
               ( cd "publish/$rid" && 7z a "../../dist/${NAME}.zip" sweeft.exe )
@@ -82,3 +82,24 @@ jobs:
           files: dist/*
           generate_release_notes: true
           fail_on_unmatched_files: true
+
+  publish-nuget:
+    name: Publish .NET tool to NuGet
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    env:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Pack tool
+        run: dotnet pack src/Sweeft.Console/Sweeft.Console.csproj -c Release -p:Version="${GITHUB_REF_NAME#v}" -o nupkg
+
+      - name: Push to NuGet
+        if: env.NUGET_API_KEY != ''
+        run: dotnet nuget push "nupkg/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate

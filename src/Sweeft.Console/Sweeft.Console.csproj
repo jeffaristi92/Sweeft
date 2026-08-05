@@ -17,10 +17,27 @@
     <Description>Sweeft — a Jeffersoft tool. Detects build/dependency folders and old, heavy files to free up disk space.</Description>
     <Authors>Yeferson Guarin (Jeffersoft)</Authors>
 
-    <!-- NativeAOT single-binary publishing (applies to `dotnet publish -r <rid>`). -->
-    <PublishAot>true</PublishAot>
+    <!-- NativeAOT: the analyzers stay on here; the actual native build is enabled
+         via `-p:PublishAot=true` in the release workflow, so `dotnet pack` (the
+         .NET global tool) is unaffected. -->
+    <IsAotCompatible>true</IsAotCompatible>
     <InvariantGlobalization>true</InvariantGlobalization>
     <StripSymbols>true</StripSymbols>
+
+    <!-- .NET global tool: `dotnet tool install -g Sweeft` -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>sweeft</ToolCommandName>
+    <PackageId>Sweeft</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/jeffaristi92/Sweeft</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jeffaristi92/Sweeft</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>cli;cleanup;disk-space;node_modules;bin;obj;dotnet-tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
